@@ -1,8 +1,8 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, status
 
 from app.adapters.storage.fake_blob_storage_adapter import FakeBlobStorageAdapter
 from app.core.uploads.controller import UploadController
-from app.core.uploads.dto import UploadInitRequestDTO
+from app.core.uploads.dto import UploadInitRequestDTO, UploadInitResponseDTO
 from app.core.uploads.init_workflow import UploadInitializationWorkflow
 from app.core.uploads.service import UploadService
 from app.repositories.in_memory_upload_metadata_repository import (
@@ -31,7 +31,11 @@ def get_upload_controller() -> UploadController:
     return UploadController(service=service)
 
 
-@router.post("/init")
+@router.post(
+    "/init",
+    status_code=status.HTTP_201_CREATED,
+    response_model=UploadInitResponseDTO,
+)
 def initialize_upload(request: UploadInitRequestDTO):
     """Initialize a dataset multipart upload.
 
