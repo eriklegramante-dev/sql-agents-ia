@@ -1,7 +1,7 @@
-from enum import StrEnum
+from enum import Enum
 
 
-class UploadStatus(StrEnum):
+class UploadStatus(str, Enum):
     """Represents the upload lifecycle status."""
 
     UPLOADING = "UPLOADING"
@@ -10,7 +10,7 @@ class UploadStatus(StrEnum):
     FAILED = "FAILED"
 
 
-class DatasetStatus(StrEnum):
+class DatasetStatus(str, Enum):
     """Represents the dataset lifecycle status."""
 
     UPLOADING = "UPLOADING"
