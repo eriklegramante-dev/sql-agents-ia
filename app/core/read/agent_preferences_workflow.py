@@ -1,6 +1,7 @@
 from typing import Optional, Dict, Any
-from datetime import datetime
+from datetime import datetime, UTC
 from app.agents.agent_preferences_repository import AgentPreferencesRepository
+from app.settings.setting import get_settings  
 
 class AgentPreferencesWorkflow:
     """
@@ -10,6 +11,7 @@ class AgentPreferencesWorkflow:
 
     def __init__(self, repository: Optional[AgentPreferencesRepository] = None):
         self.repository = repository or AgentPreferencesRepository()
+        self.settings = get_settings()
 
     def execute(self, user_id_raw: Any) -> Dict[str, Any]:
         """
@@ -31,16 +33,17 @@ class AgentPreferencesWorkflow:
 
     def _get_default_preferences_profile(self, user_id: int) -> Dict[str, Any]:
         """
-        Retorna um perfil de preferências padrão seguro e documentado,
-        caso o usuário não possua configurações customizadas no banco.
+        Retorna um perfil de preferências padrão seguro puxado diretamente
+        das configurações do sistema (settings).
         """
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
+        
         return {
             "user_id": user_id,
-            "persona_name": "Assistente SQL Padrão",
-            "persona_description": "Um agente de IA focado em auxiliar com consultas SQL e análise de dados de forma segura.",
-            "response_style": "direto",
-            "language": "pt-BR",
+            "persona_name": self.settings.agent.default_persona_name,
+            "persona_description": self.settings.agent.default_persona_description,
+            "response_style": self.settings.agent.default_response_style,
+            "language": self.settings.agent.default_language,
             "default_dataset_scope": "public",
             "tool_preferences": ["execute_sql"],
             "guardrails": ["block_sensitive_data"],

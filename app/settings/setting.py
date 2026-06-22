@@ -53,12 +53,23 @@ class SecuritySettings(BaseSettings):
         "extra": "forbid",
     }
 
+class AgentSettings(BaseSettings):
+    default_persona_name: str = "Assistente SQL Padrão"
+    default_persona_description: str = "Um agente de IA focado em auxiliar com consultas SQL de forma segura."
+    default_response_style: str = "direto"
+    default_language: str = "pt-BR"
+
+    model_config = {
+        "env_prefix": "AGENT_",
+        "extra": "ignore",  
+    }
 
 class Settings(BaseSettings):
     env: AppEnvironmentSettings = AppEnvironmentSettings()
     security: SecuritySettings = SecuritySettings()
     database: DatabaseSettings = DatabaseSettings()
     sentry: SentrySettings = SentrySettings()
+    agent: AgentSettings = AgentSettings()
 
     model_config = {
         "env_file": ".env",

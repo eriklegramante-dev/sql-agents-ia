@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from datetime import datetime
+from datetime import datetime, UTC
 from typing import List, Optional
 
 class AgentPreferencesData(BaseModel):
@@ -14,8 +14,8 @@ class AgentPreferencesData(BaseModel):
     default_dataset_scope: Optional[str] = Field(None, description="Escopo ou banco de dados padrão que o agente deve focar")
     tool_preferences: List[str] = Field(default_factory=list, description="Lista de ferramentas permitidas para o agente")
     guardrails: List[str] = Field(default_factory=list, description="Diretrizes e restrições de segurança que o agente deve seguir")
-    created_at: datetime = Field(default_factory=datetime.utcnow, description="Data de criação do registro")
-    updated_at: datetime = Field(default_factory=datetime.utcnow, description="Data da última atualização do registro")
+    created_at: datetime = Field(default_factory=lambda:datetime.now(UTC), description="Data de criação do registro")
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC), description="Data da última atualização do registro")
 
     class Config:
         from_attributes = True
