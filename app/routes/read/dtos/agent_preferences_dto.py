@@ -4,7 +4,7 @@ from typing import List, Optional
 
 class AgentPreferencesData(BaseModel):
     """
-    Representa a estrutura interna dos dados de preferência do agente.
+    It represents the internal structure of the agent's preference data.
     """
     user_id: int = Field(..., description="Identificador único do usuário")
     persona_name: str = Field(..., description="Nome da persona adotada pelo agente de IA")
@@ -23,7 +23,7 @@ class AgentPreferencesData(BaseModel):
 
 class AgentPreferencesResponse(BaseModel):
     """
-    DTO padrão de resposta exigido pela arquitetura do projeto.
+    Standard DTO response required by the project architecture.
     """
     success: bool = Field(..., description="Indica se a requisição foi processada com sucesso")
     message: str = Field(..., description="Mensagem de feedback sobre a operação")

@@ -5,8 +5,8 @@ from app.routes.read.dtos.agent_preferences_dto import AgentPreferencesResponse,
 
 class AgentPreferencesController:
     """
-    Camada controladora responsável por receber as requisições de leitura,
-    acionar a camada de serviço e formatar a saída de dados de acordo com o DTO padrão.
+    The controller layer is responsible for receiving read requests,
+    triggering the service layer, and formatting the data output according to the standard DTO.
     """
 
     def __init__(self, service: Optional[AgentPreferencesService] = None):
@@ -14,8 +14,8 @@ class AgentPreferencesController:
 
     def handle_get_preferences(self, user_id_raw: Any) -> AgentPreferencesResponse:
         """
-        Trata a requisição de busca de preferências, captura erros de validação
-        e constrói a resposta de sucesso envelopada.
+        It handles the preference search request, catches validation errors,
+        and builds the enveloped success response.
         """
         try:
             raw_data = self.service.get_user_preferences(user_id_raw)

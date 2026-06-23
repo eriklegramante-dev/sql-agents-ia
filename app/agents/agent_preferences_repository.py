@@ -2,13 +2,13 @@ from typing import Optional, Dict, Any
 
 class AgentPreferencesRepository:
     """
-    Responsável direta pelo acesso aos dados persistidos das preferências do agente.
-    Isola a lógica de queries SQL do restante da aplicação.
+    Directly responsible for accessing the persisted data of the agent's preferences.
+    Isolates the SQL query logic from the rest of the application.
     """
 
     def find_by_user_id(self, user_id: int) -> Optional[Dict[str, Any]]:
         """
-        Busca as preferências de um agente no banco de dados pelo ID do usuário.
-        Retorna um dicionário com os dados brutos ou None se não encontrar.
+        Searches for an agent's preferences in the database by user ID.
+        Returns a dictionary with the raw data or None if not found.
         """
         return None

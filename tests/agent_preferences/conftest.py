@@ -9,8 +9,8 @@ class MockAgentPreferencesRepository(AgentPreferencesRepository):
             1: {
                 "user_id": 1,
                 "persona_name": "Sênior",
-                "persona_description": "Agente focado em análise de segurança e infraestrutura.",
-                "response_style": "direto e técnico",
+                "persona_description": "Agent focused on security and infrastructure analysis.",
+                "response_style": "direct and technical",
                 "language": "pt-BR",
                 "default_dataset_scope": "production_logs",
                 "tool_preferences": ["execute_sql"],
@@ -25,5 +25,5 @@ class MockAgentPreferencesRepository(AgentPreferencesRepository):
 
 @pytest.fixture
 def mock_repository():
-    """Fixture que fornece o repositório simulado para os testes."""
+    """Fixture provides the simulated repository for testing."""
     return MockAgentPreferencesRepository()

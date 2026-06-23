@@ -10,13 +10,13 @@ router = APIRouter(prefix="/agent", tags=["Agent Preferences"])
     "/{user_id}/preferences",
     response_model=AgentPreferencesResponse,
     status_code=status.HTTP_200_OK,
-    summary="Recupera as preferências de persona e comportamento do agente de IA do usuário.",
+    summary="Retrieves the user's AI agent persona and behavior preferences.",
     dependencies=[Depends(verify_signature)]
 )
 def get_agent_preferences(user_id: Any):
     """
-    Endpoint protegido por assinatura de cabeçalho (X-Signature).
-    Recupera as configurações do agente ou retorna o perfil padrão seguro caso não existam customizações.
+    Endpoint protected by header signature (X-Signature). Retrieve agent settings or revert
+    to the secure default profile if no customizations exist.
     """
     controller = AgentPreferencesController()
     return controller.handle_get_preferences(user_id)

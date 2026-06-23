@@ -5,8 +5,8 @@ from app.settings.setting import get_settings
 
 class AgentPreferencesWorkflow:
     """
-    O coração da regra de negócio. Responsável por validar regras de acesso,
-    identificadores e aplicar a lógica de perfil padrão (fallback).
+    The core of the business rule. Responsible for validating access rules, 
+    identifiers, and applying standard profile logic (fallback).
     """
 
     def __init__(self, repository: Optional[AgentPreferencesRepository] = None):
@@ -15,14 +15,14 @@ class AgentPreferencesWorkflow:
 
     def execute(self, user_id_raw: Any) -> Dict[str, Any]:
         """
-        Executa a lógica de negócio para recuperação das preferências do agente.
+        Executes the business logic for retrieving agent preferences.
         """
         try:
             user_id = int(user_id_raw)
             if user_id <= 0:
                 raise ValueError()
         except (ValueError, TypeError):
-            raise ValueError("O identificador do usuário (user_id) fornecido é inválido.")
+            raise ValueError("The user identifier (user_id) provided is invalid.")
 
         preferences = self.repository.find_by_user_id(user_id)
 
@@ -33,8 +33,8 @@ class AgentPreferencesWorkflow:
 
     def _get_default_preferences_profile(self, user_id: int) -> Dict[str, Any]:
         """
-        Retorna um perfil de preferências padrão seguro puxado diretamente
-        das configurações do sistema (settings).
+        Returns a secure default preference profile pulled directly 
+        from the system settings.
         """
         now = datetime.now(UTC)
         
