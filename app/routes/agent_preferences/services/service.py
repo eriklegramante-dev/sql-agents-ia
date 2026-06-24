@@ -1,5 +1,5 @@
 from typing import Dict, Any, Optional
-from app.core.read.agent_preferences_workflow import AgentPreferencesWorkflow
+from app.core.agent_preferences.workflow import AgentPreferencesWorkflow
 
 
 class AgentPreferencesService:

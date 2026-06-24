@@ -1,7 +1,7 @@
 from typing import Any, Optional
 from fastapi import HTTPException, status
-from app.routes.read.services.agent_preferences_service import AgentPreferencesService
-from app.routes.read.dtos.agent_preferences_dto import (
+from app.routes.agent_preferences.services.service import AgentPreferencesService
+from app.routes.agent_preferences.dtos.dto import (
     AgentPreferencesResponse,
     AgentPreferencesData,
 )

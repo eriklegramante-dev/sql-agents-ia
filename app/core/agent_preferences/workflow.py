@@ -1,6 +1,6 @@
 from typing import Optional, Dict, Any
 from datetime import datetime, UTC
-from app.agents.agent_preferences_repository import AgentPreferencesRepository
+from app.agents.repository import AgentPreferencesRepository
 from app.settings.setting import get_settings
 
 

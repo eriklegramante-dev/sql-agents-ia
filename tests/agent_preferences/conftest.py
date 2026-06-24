@@ -1,7 +1,7 @@
 import pytest
 from datetime import datetime
 from typing import Optional, Dict, Any
-from app.agents.agent_preferences_repository import AgentPreferencesRepository
+from app.agents.repository import AgentPreferencesRepository
 
 
 class MockAgentPreferencesRepository(AgentPreferencesRepository):

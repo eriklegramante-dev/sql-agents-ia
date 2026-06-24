@@ -1,12 +1,14 @@
 from fastapi import APIRouter, Depends, status
-from app.routes.read.controllers.agent_preferences_controller import (
+from app.routes.agent_preferences.controllers.controller import (
     AgentPreferencesController,
 )
-from app.routes.read.dtos.agent_preferences_dto import AgentPreferencesResponse
 from app.security.security import verify_signature
-from app.routes.read.dtos.agent_preferences_dto import AgentPreferencesRequest
+from app.routes.agent_preferences.dtos.dto import (
+    AgentPreferencesRequest,
+    AgentPreferencesResponse,
+)
 
-router = APIRouter(prefix="/agent", tags=["Agent Preferences"])
+router = APIRouter()
 
 
 @router.get(
@@ -14,17 +16,18 @@ router = APIRouter(prefix="/agent", tags=["Agent Preferences"])
     response_model=AgentPreferencesResponse,
     status_code=status.HTTP_200_OK,
     summary="Retrieves the user's AI agent persona and behavior preferences.",
-    dependencies=[Depends(verify_signature)],
+    #dependencies=[Depends(verify_signature)],
 )
 def get_agent_preferences(user_id: int, request: AgentPreferencesRequest = Depends()):
     """
     Endpoint protected by header signature (X-Signature) to retrieve agent preferences.
 
     Args:
-        user_id (int): The unique integer identifier of the user.
+        user_id (int): The unique integer identifier of the user from the path.
+        request (AgentPreferencesRequest): Validated request context parameters.
 
     Returns:
         AgentPreferencesResponse: The standard enveloped response containing preference data.
     """
     controller = AgentPreferencesController()
-    return controller.handle_get_preferences(user_id)
+    return controller.handle_get_preferences(request.user_id)

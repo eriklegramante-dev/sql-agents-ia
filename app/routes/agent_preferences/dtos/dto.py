@@ -7,17 +7,18 @@ class AgentPreferencesRequest(BaseModel):
     """
     DTO handling robust validation and sanitization for agent preference read requests.
     """
+
     user_id: int = Field(
-        ..., 
-        gt=0, 
-        description="The unique integer identifier of the user to look up preferences."
+        ...,
+        gt=0,
+        description="The unique integer identifier of the user to look up preferences.",
     )
 
     language_filter: Optional[str] = Field(
         None,
         min_length=2,
         max_length=10,
-        description="Optional filter to search preferences by language code (e.g., pt-BR)."
+        description="Optional filter to search preferences by language code (e.g., pt-BR).",
     )
 
     @field_validator("language_filter")
@@ -28,16 +29,14 @@ class AgentPreferencesRequest(BaseModel):
         """
         if value is None:
             return value
-        
+
         cleaned_value = value.strip()
         if not cleaned_value:
             return None
-            
+
         return cleaned_value
 
-    model_config = ConfigDict(
-        extra="forbid"
-    )
+    model_config = ConfigDict(extra="forbid")
 
 
 class AgentPreferencesData(BaseModel):
