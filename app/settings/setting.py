@@ -31,14 +31,17 @@ class SentrySettings(BaseSettings):
 
 class AgentSettings(BaseSettings):
     default_persona_name: str = "Standard SQL Wizard."
-    default_persona_description: str = "An AI agent focused on assisting with SQL queries in a secure manner."
+    default_persona_description: str = (
+        "An AI agent focused on assisting with SQL queries in a secure manner."
+    )
     default_response_style: str = "direct"
     default_language: str = "pt-BR"
 
     model_config = {
         "env_prefix": "AGENT_",
-        "extra": "ignore",  
+        "extra": "ignore",
     }
+
 
 class Settings(BaseSettings):
     env: AppEnvironmentSettings = AppEnvironmentSettings()

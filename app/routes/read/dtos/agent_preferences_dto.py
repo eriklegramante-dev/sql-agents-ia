@@ -1,30 +1,76 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime, UTC
 from typing import List, Optional
 
+
 class AgentPreferencesData(BaseModel):
     """
-    It represents the internal structure of the agent's preference data.
+    Represents the internal schema validation for the agent preference core data.
     """
-    user_id: int = Field(..., description="Identificador único do usuário")
-    persona_name: str = Field(..., description="Nome da persona adotada pelo agente de IA")
-    persona_description: str = Field(..., description="Descrição detalhada do papel e comportamento da persona")
-    response_style: str = Field(..., description="Estilo de escrita do agente (ex: técnico, casual, direto)")
-    language: str = Field(default="pt-BR", description="Idioma padrão das respostas")
-    default_dataset_scope: Optional[str] = Field(None, description="Escopo ou banco de dados padrão que o agente deve focar")
-    tool_preferences: List[str] = Field(default_factory=list, description="Lista de ferramentas permitidas para o agente")
-    guardrails: List[str] = Field(default_factory=list, description="Diretrizes e restrições de segurança que o agente deve seguir")
-    created_at: datetime = Field(default_factory=lambda:datetime.now(UTC), description="Data de criação do registro")
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC), description="Data da última atualização do registro")
 
-    class Config:
-        from_attributes = True
+    user_id: int = Field(
+        ..., gt=0, description="The unique integer identifier of the user."
+    )
+
+    persona_name: str = Field(
+        ...,
+        min_length=1,
+        description="The name of the persona adopted by the AI agent.",
+    )
+    persona_description: str = Field(
+        ...,
+        min_length=1,
+        description="Detailed profile role and behavioral description of the persona.",
+    )
+    response_style: str = Field(
+        ...,
+        min_length=1,
+        description="The communication tone and writing style (e.g., technical, direct).",
+    )
+
+    language: str = Field(
+        default="pt-BR", min_length=2, description="The default response language code."
+    )
+    default_dataset_scope: Optional[str] = Field(
+        None, description="The default secure database scope boundaries for queries."
+    )
+
+    tool_preferences: List[str] = Field(
+        default_factory=list,
+        description="List of functional tools and capabilities permitted for execution.",
+    )
+    guardrails: List[str] = Field(
+        default_factory=list,
+        description="Security constraint guidelines and compliance filters applied to the model context.",
+    )
+
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        description="Timestamp indicating when the preference record was initially persisted.",
+    )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        description="Timestamp tracking the most recent modification of the preference record.",
+    )
+
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
 
 
 class AgentPreferencesResponse(BaseModel):
     """
-    Standard DTO response required by the project architecture.
+    Standard enveloped response DTO ensuring API contract uniformity across the project.
     """
-    success: bool = Field(..., description="Indica se a requisição foi processada com sucesso")
-    message: str = Field(..., description="Mensagem de feedback sobre a operação")
-    data: Optional[AgentPreferencesData] = Field(None, description="Dados das preferências do agente")
+
+    success: bool = Field(
+        ...,
+        description="Indicates whether the inbound operation was processed successfully.",
+    )
+    message: str = Field(
+        ...,
+        description="Structural context feedback message explaining the operation outcome.",
+    )
+    data: Optional[AgentPreferencesData] = Field(
+        None, description="The validated payload containing agent preference records."
+    )
+
+    model_config = ConfigDict(extra="forbid")

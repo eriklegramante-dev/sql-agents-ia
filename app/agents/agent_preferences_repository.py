@@ -1,14 +1,22 @@
 from typing import Optional, Dict, Any
 
+
 class AgentPreferencesRepository:
     """
-    Directly responsible for accessing the persisted data of the agent's preferences.
-    Isolates the SQL query logic from the rest of the application.
+    Repository class responsible for accessing the persisted agent preferences data.
+
+    This layer isolates infrastructure and SQL query logic from the core business domain.
     """
 
     def find_by_user_id(self, user_id: int) -> Optional[Dict[str, Any]]:
         """
-        Searches for an agent's preferences in the database by user ID.
-        Returns a dictionary with the raw data or None if not found.
+        Searches for an agent's preferences profile in the database by user ID.
+
+        Args:
+            user_id (int): The unique identifier of the user.
+
+        Returns:
+            Optional[Dict[str, Any]]: A dictionary containing raw preference records
+            if found, otherwise None.
         """
         return None

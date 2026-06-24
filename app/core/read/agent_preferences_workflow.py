@@ -1,21 +1,41 @@
 from typing import Optional, Dict, Any
 from datetime import datetime, UTC
 from app.agents.agent_preferences_repository import AgentPreferencesRepository
-from app.settings.setting import get_settings  
+from app.settings.setting import get_settings
+
 
 class AgentPreferencesWorkflow:
     """
-    The core of the business rule. Responsible for validating access rules, 
-    identifiers, and applying standard profile logic (fallback).
+    The core of the business domain logic for agent preferences.
+
+    Responsible for validating incoming identifiers, orchestrating database lookups,
+    and applying fallback defaults from application settings when profile data is missing.
     """
 
     def __init__(self, repository: Optional[AgentPreferencesRepository] = None):
+        """
+        Initializes the workflow with required dependencies.
+
+        Args:
+            repository (Optional[AgentPreferencesRepository]): The data persistence layer component.
+                Defaults to a new instance of AgentPreferencesRepository.
+        """
         self.repository = repository or AgentPreferencesRepository()
         self.settings = get_settings()
 
     def execute(self, user_id_raw: Any) -> Dict[str, Any]:
         """
-        Executes the business logic for retrieving agent preferences.
+        Executes the business logic orchestration to retrieve agent preferences.
+
+        Args:
+            user_id_raw (Any): The unvalidated raw user identifier incoming from the application layer.
+
+        Raises:
+            ValueError: If the user_id cannot be converted to an integer or is less than or equal to zero.
+
+        Returns:
+            Dict[str, Any]: A dictionary containing the user's custom agent preferences,
+                or a dynamic default profile fallback.
         """
         try:
             user_id = int(user_id_raw)
@@ -33,11 +53,17 @@ class AgentPreferencesWorkflow:
 
     def _get_default_preferences_profile(self, user_id: int) -> Dict[str, Any]:
         """
-        Returns a secure default preference profile pulled directly 
-        from the system settings.
+        Generates a secure default preference profile dynamically loaded from system settings.
+
+        Args:
+            user_id (int): The validated unique integer identifier of the user.
+
+        Returns:
+            Dict[str, Any]: A dictionary containing standard persona configurations, fallback parameters,
+                and precise timezone-aware creation timestamps.
         """
         now = datetime.now(UTC)
-        
+
         return {
             "user_id": user_id,
             "persona_name": self.settings.agent.default_persona_name,
@@ -48,5 +74,5 @@ class AgentPreferencesWorkflow:
             "tool_preferences": ["execute_sql"],
             "guardrails": ["block_sensitive_data"],
             "created_at": now,
-            "updated_at": now
+            "updated_at": now,
         }
