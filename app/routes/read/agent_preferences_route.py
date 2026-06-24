@@ -4,6 +4,7 @@ from app.routes.read.controllers.agent_preferences_controller import (
 )
 from app.routes.read.dtos.agent_preferences_dto import AgentPreferencesResponse
 from app.security.security import verify_signature
+from app.routes.read.dtos.agent_preferences_dto import AgentPreferencesRequest
 
 router = APIRouter(prefix="/agent", tags=["Agent Preferences"])
 
@@ -15,7 +16,7 @@ router = APIRouter(prefix="/agent", tags=["Agent Preferences"])
     summary="Retrieves the user's AI agent persona and behavior preferences.",
     dependencies=[Depends(verify_signature)],
 )
-def get_agent_preferences(user_id: int):
+def get_agent_preferences(user_id: int, request: AgentPreferencesRequest = Depends()):
     """
     Endpoint protected by header signature (X-Signature) to retrieve agent preferences.
 
