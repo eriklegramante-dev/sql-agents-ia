@@ -16,7 +16,7 @@ router = APIRouter()
     response_model=AgentPreferencesResponse,
     status_code=status.HTTP_200_OK,
     summary="Retrieves the user's AI agent persona and behavior preferences.",
-    #dependencies=[Depends(verify_signature)],
+    dependencies=[Depends(verify_signature)],
 )
 def get_agent_preferences(user_id: int, request: AgentPreferencesRequest = Depends()):
     """
