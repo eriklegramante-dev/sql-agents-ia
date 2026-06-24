@@ -1,6 +1,9 @@
 from fastapi import APIRouter, status
+from minio import Minio
 
-from app.adapters.storage.fake_blob_storage_adapter import FakeBlobStorageAdapter
+from app.adapters.storage.minio_blob_storage_adapter import (
+    MinioBlobStorageAdapter,
+)
 from app.core.uploads.controller import UploadController
 from app.core.uploads.dto import UploadInitRequestDTO, UploadInitResponseDTO
 from app.core.uploads.init_workflow import UploadInitializationWorkflow
@@ -13,7 +16,19 @@ from app.settings.app_config import app_config
 router = APIRouter(prefix="/uploads", tags=["Uploads"])
 
 repository = InMemoryUploadMetadataRepository()
-storage_adapter = FakeBlobStorageAdapter()
+
+minio_client = Minio(
+    endpoint=app_config.minio_endpoint,
+    access_key=app_config.minio_access_key,
+    secret_key=app_config.minio_secret_key,
+    secure=app_config.minio_secure,
+)
+
+storage_adapter = MinioBlobStorageAdapter(
+    client=minio_client,
+    bucket_name=app_config.minio_bucket_name,
+    signed_url_expires_seconds=app_config.signed_url_expires_seconds,
+)
 
 
 def get_upload_controller() -> UploadController:

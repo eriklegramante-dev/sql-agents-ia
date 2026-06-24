@@ -2,21 +2,19 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class AppConfig(BaseSettings):
-    """Application configuration loaded from environment variables.
-
-    Attributes:
-        app_name: Application display name.
-        app_env: Current application environment.
-        max_upload_size_bytes: Maximum accepted upload size in bytes.
-        upload_chunk_size_bytes: Default chunk size used for multipart uploads.
-        signed_url_expires_seconds: Signed URL expiration time in seconds.
-    """
+    """Application configuration loaded from environment variables."""
 
     app_name: str = "SQL Agents IA"
     app_env: str = "development"
     max_upload_size_bytes: int = 104_857_600
     upload_chunk_size_bytes: int = 5_242_880
     signed_url_expires_seconds: int = 3_600
+
+    minio_endpoint: str = "127.0.0.1:9000"
+    minio_access_key: str = "minioadmin"
+    minio_secret_key: str = "minioadmin"
+    minio_bucket_name: str = "sql-agents-raw"
+    minio_secure: bool = False
 
     model_config = SettingsConfigDict(
         env_file=".env",
