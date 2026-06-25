@@ -20,20 +20,6 @@ class AppEnvironmentSettings(BaseSettings):
     }
 
 
-class DatabaseSettings(BaseSettings):
-    url_dev: str
-    url_prod: str
-
-    model_config = {"env_prefix": "DATABASE_"}
-
-    def get_current_url(self) -> str:
-        environment = get_settings().env.environment
-
-        if environment == Environment.PROD and self.url_prod:
-            return self.url_prod
-        return self.url_dev
-
-
 class SentrySettings(BaseSettings):
     dns: str | None = None
 
@@ -43,22 +29,24 @@ class SentrySettings(BaseSettings):
     }
 
 
-class SecuritySettings(BaseSettings):
-    secret_key: str
-    jwt_algorithm: str
-    jwt_exp_minutes: int
+class AgentSettings(BaseSettings):
+    default_persona_name: str = "Standard SQL Wizard."
+    default_persona_description: str = (
+        "An AI agent focused on assisting with SQL queries in a secure manner."
+    )
+    default_response_style: str = "direct"
+    default_language: str = "pt-BR"
 
     model_config = {
-        "env_prefix": "SECURITY_",
-        "extra": "forbid",
+        "env_prefix": "AGENT_",
+        "extra": "ignore",
     }
 
 
 class Settings(BaseSettings):
     env: AppEnvironmentSettings = AppEnvironmentSettings()
-    security: SecuritySettings = SecuritySettings()
-    database: DatabaseSettings = DatabaseSettings()
     sentry: SentrySettings = SentrySettings()
+    agent: AgentSettings = AgentSettings()
 
     model_config = {
         "env_file": ".env",
