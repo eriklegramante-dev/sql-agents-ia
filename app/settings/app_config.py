@@ -1,8 +1,12 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.settings.setting import Environment, get_settings
+
 
 class AppConfig(BaseSettings):
-    """Application configuration loaded from environment variables."""
+    """
+    Application configuration loaded from environment variables.
+    """
 
     app_name: str = "SQL Agents IA"
     app_env: str = "development"
@@ -20,6 +24,14 @@ class AppConfig(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
     )
+
+    def get_root_path(self) -> str:
+        """
+        Return the application root path.
+        """
+        if get_settings().env.environment == Environment.PROD:
+            return "/crud/prod"
+        return ""
 
 
 app_config = AppConfig()
