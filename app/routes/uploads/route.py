@@ -1,49 +1,10 @@
-from fastapi import APIRouter, status
-from minio import Minio
+from fastapi import APIRouter, Depends, status
 
-from app.adapters.storage.minio_blob_storage_adapter import (
-    MinioBlobStorageAdapter,
-)
 from app.core.uploads.controller import UploadController
 from app.core.uploads.dto import UploadInitRequestDTO, UploadInitResponseDTO
-from app.core.uploads.init_workflow import UploadInitializationWorkflow
-from app.core.uploads.service import UploadService
-from app.repositories.in_memory_upload_metadata_repository import (
-    InMemoryUploadMetadataRepository,
-)
-from app.settings.app_config import app_config
+from app.routes.uploads.dependencies import get_upload_controller
 
 router = APIRouter(prefix="/uploads", tags=["Uploads"])
-
-repository = InMemoryUploadMetadataRepository()
-
-minio_client = Minio(
-    endpoint=app_config.minio_endpoint,
-    access_key=app_config.minio_access_key,
-    secret_key=app_config.minio_secret_key,
-    secure=app_config.minio_secure,
-)
-
-storage_adapter = MinioBlobStorageAdapter(
-    client=minio_client,
-    bucket_name=app_config.minio_bucket_name,
-    signed_url_expires_seconds=app_config.signed_url_expires_seconds,
-)
-
-
-def get_upload_controller() -> UploadController:
-    """Create an upload controller with its dependencies.
-
-    Returns:
-        Configured upload controller instance.
-    """
-    workflow = UploadInitializationWorkflow(
-        repository=repository,
-        storage_adapter=storage_adapter,
-        config=app_config,
-    )
-    service = UploadService(init_workflow=workflow)
-    return UploadController(service=service)
 
 
 @router.post(
@@ -51,14 +12,11 @@ def get_upload_controller() -> UploadController:
     status_code=status.HTTP_201_CREATED,
     response_model=UploadInitResponseDTO,
 )
-def initialize_upload(request: UploadInitRequestDTO):
-    """Initialize a dataset multipart upload.
-
-    Args:
-        request: Upload initialization payload.
-
-    Returns:
-        Standardized upload initialization response.
+def initialize_upload(
+    request: UploadInitRequestDTO,
+    controller: UploadController = Depends(get_upload_controller),
+):
     """
-    controller = get_upload_controller()
+    Initialize a dataset multipart upload.
+    """
     return controller.initialize_upload(request)

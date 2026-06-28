@@ -10,8 +10,9 @@ from app.core.uploads.dto import (
     UploadSignedPartDTO,
 )
 from app.core.uploads.enums import DatasetStatus, UploadStatus
+from app.logs.setup_logger import LOGGER
 from app.repositories.upload_metadata_repository import UploadMetadataRepository
-from app.settings.app_config import AppConfig
+from app.settings.setting import UploadSettings
 
 
 class UploadInitializationWorkflow:
@@ -29,7 +30,7 @@ class UploadInitializationWorkflow:
         self,
         repository: UploadMetadataRepository,
         storage_adapter: BlobStorageAdapter,
-        config: AppConfig,
+        config: UploadSettings,
     ) -> None:
         """Initialize the upload initialization workflow.
 
@@ -61,6 +62,7 @@ class UploadInitializationWorkflow:
         Raises:
             ValueError: If the file metadata violates upload rules.
         """
+        LOGGER.log_info("[upload:init:workflow] Starting upload initialization")
         self._validate_file_extension(request.filename)
         self._validate_content_type(request.content_type)
         self._validate_file_size(request.file_size_bytes)
@@ -72,6 +74,12 @@ class UploadInitializationWorkflow:
         chunks_count = self._calculate_chunks_count(
             file_size_bytes=request.file_size_bytes,
             chunk_size_bytes=chunk_size_bytes,
+        )
+
+        LOGGER.log_debug(
+            "[upload:init:workflow] Upload plan calculated: "
+            f"dataset_id={dataset_id}, chunks_count={chunks_count}, "
+            f"chunk_size_bytes={chunk_size_bytes}"
         )
 
         upload_id = self.storage_adapter.initialize_multipart_upload(
@@ -99,6 +107,9 @@ class UploadInitializationWorkflow:
         )
 
         self.repository.create(metadata)
+        LOGGER.log_info(
+            "[upload:init:workflow] Upload metadata persisted successfully"
+        )
 
         return {
             "dataset_id": dataset_id,
@@ -121,6 +132,9 @@ class UploadInitializationWorkflow:
         """
         extension = Path(filename).suffix.lower()
         if extension not in self.allowed_extensions:
+            LOGGER.log_warning(
+                f"[upload:init:workflow] Invalid file extension: {extension}"
+            )
             raise ValueError("Invalid file extension. Allowed: csv, xlsx.")
 
     def _validate_content_type(self, content_type: str) -> None:
@@ -133,6 +147,9 @@ class UploadInitializationWorkflow:
             ValueError: If the content type is not accepted.
         """
         if content_type not in self.accepted_content_types:
+            LOGGER.log_warning(
+                f"[upload:init:workflow] Invalid content type: {content_type}"
+            )
             raise ValueError("Invalid content type for upload.")
 
     def _validate_file_size(self, file_size_bytes: int) -> None:
@@ -145,6 +162,11 @@ class UploadInitializationWorkflow:
             ValueError: If the file size exceeds the configured limit.
         """
         if file_size_bytes > self.config.max_upload_size_bytes:
+            LOGGER.log_warning(
+                "[upload:init:workflow] File size exceeds limit: "
+                f"file_size_bytes={file_size_bytes}, "
+                f"max_upload_size_bytes={self.config.max_upload_size_bytes}"
+            )
             raise ValueError("File size exceeds the maximum upload limit.")
 
     def _normalize_dataset_name(self, dataset_name: str) -> str:

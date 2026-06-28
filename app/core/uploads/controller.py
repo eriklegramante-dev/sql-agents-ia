@@ -7,6 +7,7 @@ from app.core.uploads.dto import (
     UploadInitResponseDTO,
 )
 from app.core.uploads.service import UploadService
+from app.logs.setup_logger import LOGGER
 
 
 class UploadController:
@@ -37,6 +38,9 @@ class UploadController:
             Standardized JSON response.
         """
         try:
+            LOGGER.log_info(
+                "[upload:init:controller] Received upload initialization request"
+            )
             result = self.service.initialize_upload(request)
             response = UploadInitResponseDTO(
                 success=True,
@@ -44,11 +48,18 @@ class UploadController:
                 data=UploadInitResponseDataDTO(**result),
             )
 
+            LOGGER.log_info(
+                "[upload:init:controller] Upload initialization response created"
+            )
+
             return JSONResponse(
                 status_code=status.HTTP_201_CREATED,
                 content=response.model_dump(mode="json"),
             )
         except ValueError as exc:
+            LOGGER.log_warning(
+                f"[upload:init:controller] Upload initialization validation failed: {exc}"
+            )
             return JSONResponse(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 content={

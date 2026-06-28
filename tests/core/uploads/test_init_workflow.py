@@ -6,7 +6,7 @@ from app.core.uploads.init_workflow import UploadInitializationWorkflow
 from app.repositories.in_memory_upload_metadata_repository import (
     InMemoryUploadMetadataRepository,
 )
-from app.settings.app_config import AppConfig
+from app.settings.setting import UploadSettings
 
 
 def make_workflow() -> tuple[
@@ -15,7 +15,7 @@ def make_workflow() -> tuple[
 ]:
     repository = InMemoryUploadMetadataRepository()
     storage_adapter = FakeBlobStorageAdapter()
-    config = AppConfig(
+    config = UploadSettings(
         max_upload_size_bytes=10_000_000,
         upload_chunk_size_bytes=5_000_000,
         signed_url_expires_seconds=3600,
