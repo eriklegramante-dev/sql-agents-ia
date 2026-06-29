@@ -44,7 +44,7 @@ class DatasetPreparationControllerTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(service.received_dataset_id, DATASET_ID)
         self.assertEqual(result["success"], True)
         self.assertEqual(result["message"], "Dataset prepared successfully")
-        self.assertEqual(result["errors"], None)
+        self.assertNotIn("errors", result)
         self.assertEqual(result["data"]["dataset_id"], str(DATASET_ID))
         self.assertEqual(result["data"]["schema"][0]["name"], "amount")
 

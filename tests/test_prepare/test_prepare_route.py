@@ -105,7 +105,6 @@ class PrepareDatasetRouteTest(unittest.TestCase):
                 ],
                 "updated_at": datetime(2026, 6, 23, 12, 0, 0).isoformat(),
             },
-            "errors": None,
         }
         controller = FakePreparationController(response=expected_response)
         self.override_controller(controller)

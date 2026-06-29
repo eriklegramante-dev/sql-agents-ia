@@ -1,26 +1,49 @@
-from datetime import datetime
-from typing import Optional
-from uuid import UUID
+import enum
+import uuid
 
-from pydantic import BaseModel
+from sqlalchemy import Column, DateTime, Enum, Integer, String, Text, func
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import declarative_base
 
-from app.enums.dataset_status import DatasetStatus
+Base = declarative_base()
 
 
-class DatasetTable(BaseModel):
-    """Represents a dataset row stored in the database.
+class DatasetStatus(enum.Enum):
+    UPLOADING = "UPLOADING"
+    COMPLETED = "COMPLETED"
+    PREPARING = "PREPARING"
+    PREPARED = "PREPARED"
+    FAILED = "FAILED"
+    DELETED = "DELETED"
 
-    Keeps upload status, raw/prepared object keys, row and column counts, and
-    audit timestamps used by the preparation workflow.
+
+class DatasetTable(Base):
+    """
+    SQLAlchemy model that represents dataset metadata persisted in the database.
+
+    Stores the dataset lifecycle status, raw and prepared object keys, row and
+    column counters, processing error information, and audit timestamps used by
+    the dataset preparation workflow.
     """
 
-    id: UUID
-    name: str
-    status: DatasetStatus
-    raw_object_key: str
-    prepared_object_key: Optional[str] = None
-    rows_count: Optional[int] = None
-    columns_count: Optional[int] = None
-    error_message: Optional[str] = None
-    created_at: datetime
-    updated_at: datetime
+    __tablename__ = "datasets"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String(255), nullable=False)
+    status = Column(
+        Enum(DatasetStatus, name="dataset_status"),
+        nullable=False,
+        default=DatasetStatus.UPLOADING,
+    )
+    raw_object_key = Column(Text, nullable=False)
+    prepared_object_key = Column(Text, nullable=True)
+    rows_count = Column(Integer, nullable=True)
+    columns_count = Column(Integer, nullable=True)
+    error_message = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )

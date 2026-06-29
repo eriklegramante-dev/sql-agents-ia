@@ -24,7 +24,7 @@ class DataFrameReader:
 
         Raises:
             ValueError: If ``object_key`` does not end with ``.csv`` or
-            ``.xlsx``.
+                ``.xlsx``.
         """
         object_key_lower = object_key.lower()
 

@@ -32,7 +32,7 @@ class SchemaInferer:
         if numeric_series.notna().mean() >= 0.9:
             return "numeric"
 
-        datetime_series = pd.to_datetime(clean_series, errors="coerce")
+        datetime_series = pd.to_datetime(clean_series, errors="coerce", format="mixed")
         if datetime_series.notna().mean() >= 0.9:
             return "datetime"
 

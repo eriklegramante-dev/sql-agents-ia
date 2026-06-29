@@ -1,5 +1,6 @@
 from uuid import UUID
 
+from app.routes.prepare.dtos.dto import DatasetPreparationResponseDTO
 from app.routes.prepare.services.service import DatasetPreparationService
 
 
@@ -28,13 +29,15 @@ class DatasetPreparationController:
 
         Returns:
             dict: API response envelope with success flag, message, serialized
-            preparation data, and errors field.
+            preparation data.
         """
         result = await self.service.prepare_dataset(dataset_id)
 
-        return {
-            "success": True,
-            "message": "Dataset prepared successfully",
-            "data": result.model_dump(mode="json", by_alias=True),
-            "errors": None,
-        }
+        response = DatasetPreparationResponseDTO(
+            success=True,
+            message="Dataset prepared successfully",
+            data=result,
+            errors=None,
+        )
+
+        return response.model_dump(mode="json", by_alias=True)

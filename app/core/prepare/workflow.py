@@ -1,18 +1,16 @@
-import logging
 from datetime import datetime
 from uuid import UUID
 
 from app.adapters.storage.base import StorageAdapter
-from app.config.settings import settings
-from app.prepare.exceptions import ConflictException, NotFoundException, StorageException
 from app.database.dataset_repository import DatasetRepository
 from app.enums.dataset_status import DatasetStatus
-from app.routes.prepare.dtos.dto import DatasetPreparationResponseData
+from app.logs.prepare_logger import PrepareLogger
+from app.prepare.exceptions import ConflictException, NotFoundException, StorageException
+from app.routes.prepare.dtos.dto import DatasetPreparationDataDTO
 from app.routes.prepare.helpers.dataframe.dataframe_reader import DataFrameReader
 from app.routes.prepare.helpers.parquet.parquet_writer import ParquetWriter
 from app.routes.prepare.helpers.schema.schema_inferer import SchemaInferer
-
-logger = logging.getLogger(__name__)
+from app.settings.setting import get_settings
 
 
 class DatasetPreparationWorkflow:
@@ -42,17 +40,18 @@ class DatasetPreparationWorkflow:
     ):
         self.repository = dataset_repository
         self.storage = storage_adapter
-        self.raw_container = settings.RAW_CONTAINER
-        self.prepared_container = settings.PREPARED_CONTAINER
+        settings = get_settings()
+        self.raw_container = settings.storage.raw_container
+        self.prepared_container = settings.storage.prepared_container
 
-    async def execute(self, dataset_id: UUID) -> DatasetPreparationResponseData:
+    async def execute(self, dataset_id: UUID) -> DatasetPreparationDataDTO:
         """Prepare one completed dataset and return its response payload.
 
         Args:
             dataset_id (UUID): Identifier of the dataset to prepare.
 
         Returns:
-            DatasetPreparationResponseData: Prepared dataset metadata, row and
+            DatasetPreparationDataDTO: Prepared dataset metadata, row and
             column counts, prepared object key, and inferred schema.
 
         Raises:
@@ -60,14 +59,19 @@ class DatasetPreparationWorkflow:
             ConflictException: If the dataset is not in completed status.
             StorageException: If the raw file cannot be read from storage.
             Exception: Re-raises unexpected processing or persistence errors
-            after marking the dataset as failed.
+                after marking the dataset as failed.
         """
+
+        PrepareLogger.started(dataset_id)
+
         dataset = await self.repository.get_by_id(dataset_id)
 
         if dataset is None:
+            PrepareLogger.not_found(dataset_id)
             raise NotFoundException(f"Dataset with ID {dataset_id} not found")
 
         if dataset.status != DatasetStatus.COMPLETED:
+            PrepareLogger.preparation_rejected(dataset_id, dataset.status.value)
             raise ConflictException(
                 f"Dataset cannot be prepared while status is {dataset.status.value}"
             )
@@ -109,8 +113,9 @@ class DatasetPreparationWorkflow:
                 rows_count=rows_count,
                 columns_count=columns_count,
             )
+            PrepareLogger.prepared_successfully(dataset_id, prepared_object_key)
 
-            return DatasetPreparationResponseData(
+            return DatasetPreparationDataDTO(
                 dataset_id=updated_dataset.id,
                 status=updated_dataset.status.value,
                 raw_object_key=updated_dataset.raw_object_key,
@@ -127,6 +132,7 @@ class DatasetPreparationWorkflow:
                 DatasetStatus.FAILED,
                 str(error),
             )
+            PrepareLogger.raw_file_not_found(dataset_id, error)
             raise StorageException(str(error))
 
         except Exception as error:
@@ -135,4 +141,5 @@ class DatasetPreparationWorkflow:
                 DatasetStatus.FAILED,
                 str(error),
             )
+            PrepareLogger.failed(dataset_id, error)
             raise
