@@ -7,6 +7,13 @@ from app.routes.update.services.service import AgentPreferencesUpdateService
 
 
 class AgentPreferencesUpdateController:
+    """
+    Controller layer responsible for handling the execution flow of agent preference updates.
+    
+    Acts as an intermediary that orchestrates the data flow by passing transport-layer 
+    inputs to the business service layer and shaping the returned raw domain structures 
+    into strict API response contracts (DTOs).
+    """
     def __init__(self, service: AgentPreferencesUpdateService = None):
         self.service = service or AgentPreferencesUpdateService()
 

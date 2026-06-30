@@ -4,6 +4,13 @@ from fastapi import HTTPException, status
 
 
 class AgentPreferencesUpdateWorkflow:
+    """
+    Core workflow engine responsible for the business logic of updating agent preferences.
+    
+    Coordinates transactional validation, enforces safe default configurations from the POC 
+    on creation (Scenario A), and manages data merging to preserve omitted fields during 
+    partial profile updates (Scenario B).
+    """
     def __init__(self, repository=None):
         self.repository = repository
 

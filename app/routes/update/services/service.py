@@ -3,6 +3,14 @@ from app.core.agent_preferences.update.workflow import AgentPreferencesUpdateWor
 
 
 class AgentPreferencesUpdateService:
+    """
+    Service layer responsible for architectural isolation.
+    
+    Acts as a boundary between the HTTP transport layer (FastAPI) and the core 
+    business logic (Workflow), ensuring that data payloads are mapped into pure 
+    Python structures before deep execution.
+    """
+    
     def __init__(self, workflow: AgentPreferencesUpdateWorkflow = None):
         self.workflow = workflow or AgentPreferencesUpdateWorkflow()
 
