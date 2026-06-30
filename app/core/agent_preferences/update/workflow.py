@@ -6,18 +6,38 @@ from fastapi import HTTPException, status
 class AgentPreferencesUpdateWorkflow:
     """
     Core workflow engine responsible for the business logic of updating agent preferences.
-    
-    Coordinates transactional validation, enforces safe default configurations from the POC 
-    on creation (Scenario A), and manages data merging to preserve omitted fields during 
+
+    Coordinates transactional validation, enforces safe default configurations from the POC
+    on creation (Scenario A), and manages data merging to preserve omitted fields during
     partial profile updates (Scenario B).
+
+    Attributes:
+        repository (Any): The data persistence layer component handling storage operations.
     """
-    def __init__(self, repository=None):
+
+    def __init__(self, repository: Any = None) -> None:
+        """
+        Initializes the workflow with optional repository injection.
+
+        Args:
+            repository (Any, optional): The database repository instance. Defaults to None.
+        """
         self.repository = repository
 
     def execute(self, user_id: int, update_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Executes the business logic for creating or updating agent preferences (Upsert).
         Ensures safe defaults for new configurations and preserves omitted fields for existing ones.
+
+        Args:
+            user_id (int): The unique identifier of the user. Must be a positive integer.
+            update_data (Dict[str, Any]): Dictionary containing the fields to update or create.
+
+        Returns:
+            Dict[str, Any]: The finalized state of the agent preferences after execution.
+
+        Raises:
+            HTTPException: 400 Bad Request if user_id is non-positive or if update_data payload is empty.
         """
         if user_id <= 0:
             raise HTTPException(

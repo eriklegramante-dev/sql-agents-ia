@@ -1,4 +1,4 @@
-from fastapi import APIRouter, status, Path
+from fastapi import APIRouter, Path, Depends
 from app.routes.update.dtos.dto import (
     AgentPreferencesUpdateRequest,
     AgentPreferencesUpdateResponse,
@@ -17,10 +17,20 @@ router = APIRouter(prefix="/api/v1", tags=["Agent Preferences"])
 def update_agent_preferences(
     payload: AgentPreferencesUpdateRequest,
     user_id: int = Path(..., description="The identifier of the user", gt=0),
-):
+    controller: AgentPreferencesUpdateController = Depends(
+        AgentPreferencesUpdateController
+    ),
+) -> AgentPreferencesUpdateResponse:
     """
     Route handler for the update/upsert operation.
     Receives user_id path parameter and delegates processing downwards.
+
+    Args:
+        payload (AgentPreferencesUpdateRequest): The validated body payload parameters.
+        user_id (int): The unique identifier extracted from the path. Must be > 0.
+        controller (AgentPreferencesUpdateController): Injected controller instance handling coordination.
+
+    Returns:
+        AgentPreferencesUpdateResponse: Standard API response container with updated profile structure.
     """
-    controller = AgentPreferencesUpdateController()
     return controller.update_preferences(user_id=user_id, payload=payload)
