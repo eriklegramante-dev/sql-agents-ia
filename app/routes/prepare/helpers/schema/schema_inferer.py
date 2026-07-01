@@ -160,4 +160,9 @@ class SchemaInferer:
                 )
             )
 
-        return processed_df, columns_schema, len(processed_df), len(processed_df.columns)
+        return (
+            processed_df,
+            columns_schema,
+            len(processed_df),
+            len(processed_df.columns),
+        )

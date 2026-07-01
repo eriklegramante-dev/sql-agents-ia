@@ -5,7 +5,11 @@ from datetime import datetime
 from uuid import UUID
 
 from app.prepare.dependencies import get_dataset_preparation_controller
-from app.prepare.exceptions import ConflictException, NotFoundException, StorageException
+from app.prepare.exceptions import (
+    ConflictException,
+    NotFoundException,
+    StorageException,
+)
 from app.main import app
 from tests.helpers import DATASET_ID
 
@@ -80,9 +84,7 @@ class PrepareDatasetRouteTest(unittest.TestCase):
         async def get_controller():
             return controller
 
-        app.dependency_overrides[get_dataset_preparation_controller] = (
-            get_controller
-        )
+        app.dependency_overrides[get_dataset_preparation_controller] = get_controller
 
     def test_prepare_dataset_returns_success_response(self):
         expected_response = {

@@ -6,7 +6,9 @@ class PrepareLogger:
 
     @staticmethod
     def started(dataset_id: str) -> None:
-        LOGGER.log_info(f"[prepare] Starting dataset preparation: dataset_id={dataset_id}")
+        LOGGER.log_info(
+            f"[prepare] Starting dataset preparation: dataset_id={dataset_id}"
+        )
 
     @staticmethod
     def status_updated_to_preparing(dataset_id: str) -> None:
@@ -70,5 +72,5 @@ class PrepareLogger:
         PrepareLogger.prepared_successfully(dataset_id, prepared_object_key)
 
     @staticmethod
-    def not_found(dataset_id: str) -> None: 
+    def not_found(dataset_id: str) -> None:
         PrepareLogger.dataset_not_found(dataset_id)

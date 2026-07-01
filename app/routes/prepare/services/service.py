@@ -46,7 +46,9 @@ class DatasetPreparationService:
             Exception:
                 Re-raises any exception raised by the workflow after logging it.
         """
-        self.logger.info("Starting dataset preparation service for dataset %s", dataset_id)
+        self.logger.info(
+            "Starting dataset preparation service for dataset %s", dataset_id
+        )
 
         try:
             result = await self.workflow.execute(dataset_id)

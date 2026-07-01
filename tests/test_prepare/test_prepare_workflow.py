@@ -4,7 +4,11 @@ from unittest.mock import patch
 
 import pandas as pd
 
-from app.prepare.exceptions import ConflictException, NotFoundException, StorageException
+from app.prepare.exceptions import (
+    ConflictException,
+    NotFoundException,
+    StorageException,
+)
 from app.enums.dataset_status import DatasetStatus
 from app.core.prepare.workflow import DatasetPreparationWorkflow
 from tests.helpers import (
@@ -54,7 +58,9 @@ class DatasetPreparationWorkflowTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(written_df.columns.tolist(), ["amount", "paid"])
 
     async def test_execute_fails_when_dataset_does_not_exist(self):
-        workflow = DatasetPreparationWorkflow(FakeDatasetRepository(None), FakeStorage())
+        workflow = DatasetPreparationWorkflow(
+            FakeDatasetRepository(None), FakeStorage()
+        )
 
         with self.assertRaises(NotFoundException):
             await workflow.execute(DATASET_ID)
