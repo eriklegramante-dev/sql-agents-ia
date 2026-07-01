@@ -1,5 +1,5 @@
-from app.core.uploads.dto import UploadInitRequestDTO
-from app.core.uploads.service import UploadService
+from app.routes.uploads.dto import UploadInitRequestDTO
+from app.routes.uploads.service import UploadService
 
 
 class FakeInitWorkflow:
@@ -13,7 +13,7 @@ class FakeInitWorkflow:
 
 def test_initialize_upload_delegates_to_workflow() -> None:
     workflow = FakeInitWorkflow()
-    service = UploadService(init_workflow=workflow)
+    service = UploadService(workflow=workflow)
     request = UploadInitRequestDTO(
         filename="customers.csv",
         content_type="text/csv",

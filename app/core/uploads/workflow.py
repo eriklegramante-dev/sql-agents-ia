@@ -5,7 +5,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from app.adapters.storage.blob_storage_adapter import BlobStorageAdapter
-from app.core.uploads.dto import (
+from app.routes.uploads.dto import (
     UploadInitRequestDTO,
     UploadSignedPartDTO,
 )

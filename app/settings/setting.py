@@ -55,10 +55,10 @@ class UploadSettings(BaseSettings):
 
 
 class MinioSettings(BaseSettings):
-    endpoint: str = "127.0.0.1:9000"
-    access_key: str = "minioadmin"
-    secret_key: str = "minioadmin"
-    bucket_name: str = "sql-agents-raw"
+    endpoint: str
+    access_key: str
+    secret_key: str
+    bucket_name: str
     secure: bool = False
 
     model_config = {

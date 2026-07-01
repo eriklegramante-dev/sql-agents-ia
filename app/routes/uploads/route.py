@@ -1,8 +1,7 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, status
 
-from app.core.uploads.controller import UploadController
-from app.core.uploads.dto import UploadInitRequestDTO, UploadInitResponseDTO
-from app.routes.uploads.dependencies import get_upload_controller
+from app.routes.uploads.controller import UploadController
+from app.routes.uploads.dto import UploadInitRequestDTO, UploadInitResponseDTO
 
 router = APIRouter(prefix="/uploads", tags=["Uploads"])
 
@@ -12,11 +11,9 @@ router = APIRouter(prefix="/uploads", tags=["Uploads"])
     status_code=status.HTTP_201_CREATED,
     response_model=UploadInitResponseDTO,
 )
-def initialize_upload(
-    request: UploadInitRequestDTO,
-    controller: UploadController = Depends(get_upload_controller),
-):
+def initialize_upload(request: UploadInitRequestDTO):
     """
     Initialize a dataset multipart upload.
     """
+    controller = UploadController()
     return controller.initialize_upload(request)

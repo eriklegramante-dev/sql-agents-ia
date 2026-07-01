@@ -1,12 +1,14 @@
+from typing import Optional
+
 from fastapi import status
 from fastapi.responses import JSONResponse
 
-from app.core.uploads.dto import (
+from app.routes.uploads.dto import (
     UploadInitRequestDTO,
     UploadInitResponseDataDTO,
     UploadInitResponseDTO,
 )
-from app.core.uploads.service import UploadService
+from app.routes.uploads.service import UploadService
 from app.logs.setup_logger import LOGGER
 
 
@@ -17,13 +19,13 @@ class UploadController:
         service: Upload service used to process requests.
     """
 
-    def __init__(self, service: UploadService) -> None:
+    def __init__(self, service: Optional[UploadService] = None) -> None:
         """Initialize the upload controller.
 
         Args:
             service: Upload service used to process requests.
         """
-        self.service = service
+        self.service = service or UploadService()
 
     def initialize_upload(
         self,
