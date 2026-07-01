@@ -1,5 +1,6 @@
 import logging
 import sys
+from pathlib import Path
 from typing import Optional
 
 import sentry_sdk
@@ -7,6 +8,9 @@ from sentry_sdk.integrations.logging import LoggingIntegration
 
 from app.logs.trace import get_trace_id
 from app.settings.setting import Environment, Settings, get_settings
+
+LOGS_DIRECTORY = Path("logs")
+LOG_FILE_PATH = LOGS_DIRECTORY / "app.log"
 
 
 class LoggerManager:
@@ -27,13 +31,22 @@ class LoggerManager:
         self.debug = debug
         self.logger = logging.getLogger("logger")
         self.logger.setLevel(logging.DEBUG if self.debug else logging.INFO)
+        formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
 
-        if not self.logger.handlers:
+        if not self._has_handler("console"):
             console_handler = logging.StreamHandler(sys.stdout)
+            console_handler.set_name("console")
             console_handler.setLevel(logging.DEBUG if self.debug else logging.INFO)
-            formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
             console_handler.setFormatter(formatter)
             self.logger.addHandler(console_handler)
+
+        if not self._has_handler("file"):
+            LOGS_DIRECTORY.mkdir(parents=True, exist_ok=True)
+            file_handler = logging.FileHandler(LOG_FILE_PATH, encoding="utf-8")
+            file_handler.set_name("file")
+            file_handler.setLevel(logging.DEBUG if self.debug else logging.INFO)
+            file_handler.setFormatter(formatter)
+            self.logger.addHandler(file_handler)
 
         if not self.debug:
             sentry_logging = LoggingIntegration(
@@ -46,6 +59,9 @@ class LoggerManager:
                 send_default_pii=True,
                 traces_sample_rate=1.0,
             )
+
+    def _has_handler(self, name: str) -> bool:
+        return any(handler.get_name() == name for handler in self.logger.handlers)
 
     def log_info(self, message: str) -> None:
         """
