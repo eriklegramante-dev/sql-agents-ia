@@ -67,12 +67,41 @@ class MinioSettings(BaseSettings):
     }
 
 
+class DatabaseSettings(BaseSettings):
+    host: str = "localhost"
+    port: int = 5432
+    name: str = "sql_agents"
+    user: str = "postgres"
+    password: str = "password"
+    min_pool_size: int = 1
+    max_pool_size: int = 5
+
+    model_config = {
+        "env_prefix": "DB_",
+        "extra": "ignore",
+    }
+
+
+class StorageSettings(BaseSettings):
+    storage_type: str = "local"
+    azure_storage_connection_string: str | None = None
+    local_storage_path: str = "./storage"
+    raw_container: str = "raw"
+    prepared_container: str = "prepared"
+
+    model_config = {
+        "extra": "ignore",
+    }
+
+
 class Settings(BaseSettings):
     env: AppEnvironmentSettings = AppEnvironmentSettings()
     sentry: SentrySettings = SentrySettings()
     agent: AgentSettings = AgentSettings()
     upload: UploadSettings = UploadSettings()
     minio: MinioSettings = MinioSettings()
+    database: DatabaseSettings = DatabaseSettings()
+    storage: StorageSettings = StorageSettings()
 
     model_config = {
         "env_file": ".env",

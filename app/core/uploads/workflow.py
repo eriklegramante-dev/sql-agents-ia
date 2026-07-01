@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID, uuid4
 
-from app.adapters.storage.blob_storage_adapter import BlobStorageAdapter
+from app.adapters.storage.blob_storage_adapter import MultipartStorageAdapter
 from app.routes.uploads.dto import (
     UploadInitRequestDTO,
     UploadSignedPartDTO,
@@ -29,7 +29,7 @@ class UploadInitializationWorkflow:
     def __init__(
         self,
         repository: UploadMetadataRepository,
-        storage_adapter: BlobStorageAdapter,
+        storage_adapter: MultipartStorageAdapter,
         config: UploadSettings,
     ) -> None:
         """Initialize the upload initialization workflow.

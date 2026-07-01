@@ -1,9 +1,9 @@
 from uuid import uuid4
 
-from app.adapters.storage.blob_storage_adapter import BlobStorageAdapter
+from app.adapters.storage.blob_storage_adapter import MultipartStorageAdapter
 
 
-class FakeBlobStorageAdapter(BlobStorageAdapter):
+class FakeBlobStorageAdapter(MultipartStorageAdapter):
     """Fake storage adapter used for local multipart upload simulation."""
 
     def initialize_multipart_upload(

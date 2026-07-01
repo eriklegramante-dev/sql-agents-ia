@@ -4,10 +4,10 @@ from typing import Any
 from minio import Minio
 from minio.error import S3Error
 
-from app.adapters.storage.blob_storage_adapter import BlobStorageAdapter
+from app.adapters.storage.blob_storage_adapter import MultipartStorageAdapter
 
 
-class MinioBlobStorageAdapter(BlobStorageAdapter):
+class MinioBlobStorageAdapter(MultipartStorageAdapter):
     """MinIO adapter responsible for multipart upload operations.
 
     Attributes:
