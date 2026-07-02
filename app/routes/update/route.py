@@ -1,4 +1,6 @@
 from fastapi import APIRouter, Path, Depends
+
+from app.routes.update.controllers.controller import AgentPreferencesUpdateController
 from app.routes.update.dependencies.dependence import get_agent_preferences_update_controller
 from app.routes.update.dtos.dto import (
     AgentPreferencesUpdateRequest,

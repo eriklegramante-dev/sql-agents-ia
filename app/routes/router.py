@@ -5,6 +5,8 @@ from app.routes.agent_preferences.route import (
 )
 from app.routes.prepare.route import router as prepare_router
 from app.routes.schema.route import router as schema_router
+from app.routes.update.route import router as update_router
+from app.routes.uploads.route import router as uploads_router
 
 
 api_router = APIRouter(prefix="/api/v1")
@@ -28,6 +30,5 @@ api_router.include_router(
 
 api_router.include_router(
     schema_router,
-    prefix="/api/v1",
     tags=["Schema"],
 )
