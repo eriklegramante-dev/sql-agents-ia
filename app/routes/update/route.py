@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Path, Depends
+from app.routes.update.dependencies.dependence import get_agent_preferences_update_controller
 from app.routes.update.dtos.dto import (
     AgentPreferencesUpdateRequest,
     AgentPreferencesUpdateResponse,
@@ -18,7 +19,7 @@ def update_agent_preferences(
     payload: AgentPreferencesUpdateRequest,
     user_id: int = Path(..., description="The identifier of the user", gt=0),
     controller: AgentPreferencesUpdateController = Depends(
-        AgentPreferencesUpdateController
+        get_agent_preferences_update_controller
     ),
 ) -> AgentPreferencesUpdateResponse:
     """
