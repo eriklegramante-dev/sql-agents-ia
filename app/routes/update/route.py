@@ -4,16 +4,18 @@ from app.routes.update.dtos.dto import (
     AgentPreferencesUpdateRequest,
     AgentPreferencesUpdateResponse,
 )
-from app.routes.update.controllers.controller import AgentPreferencesUpdateController
 
-router = APIRouter(prefix="/api/v1", tags=["Agent Preferences"])
+router = APIRouter(tags=["Agent Preferences"])
 
 
 @router.put(
     "/{user_id}/preferences",
     response_model=AgentPreferencesUpdateResponse,
-    summary="Create or update agent/persona preferences",
-    description="Upserts user configuration profile for the AI agent behavior.",
+    summary="Create or update agent preferences.",
+    description=(
+        "Creates a new agent preference profile when one does not exist "
+        "or updates the existing configuration for the specified user."
+    ),
 )
 def update_agent_preferences(
     payload: AgentPreferencesUpdateRequest,
@@ -23,15 +25,28 @@ def update_agent_preferences(
     ),
 ) -> AgentPreferencesUpdateResponse:
     """
-    Route handler for the update/upsert operation.
-    Receives user_id path parameter and delegates processing downwards.
+    Create or update an agent preferences profile.
+
+    This route receives the validated request payload together with the
+    target user identifier, delegates the business execution to the
+    controller layer, and returns a standardized response describing the
+    persisted agent preferences.
 
     Args:
-        payload (AgentPreferencesUpdateRequest): The validated body payload parameters.
-        user_id (int): The unique identifier extracted from the path. Must be > 0.
-        controller (AgentPreferencesUpdateController): Injected controller instance handling coordination.
+        payload (AgentPreferencesUpdateRequest):
+            Validated request containing the agent preference configuration.
+        user_id (int):
+            Unique identifier of the user whose preferences will be created
+            or updated.
 
     Returns:
-        AgentPreferencesUpdateResponse: Standard API response container with updated profile structure.
+        AgentPreferencesUpdateResponse:
+            Standardized response containing the persisted agent
+            preferences after the operation completes successfully.
     """
-    return controller.update_preferences(user_id=user_id, payload=payload)
+    controller = AgentPreferencesUpdateController()
+
+    return controller.update_preferences(
+        user_id=user_id,
+        payload=payload,
+    )

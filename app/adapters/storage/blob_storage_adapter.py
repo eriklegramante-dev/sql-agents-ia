@@ -1,6 +1,68 @@
+from abc import ABC, abstractmethod
+from typing import Any
+
 from azure.storage.blob import BlobServiceClient
 
 from app.adapters.storage.base import StorageAdapter
+
+
+class MultipartStorageAdapter(ABC):
+    """
+    Storage abstraction responsible for multipart upload operations.
+
+    This contract is used by upload workflows that need to initialize,
+    sign, complete, abort, or clean multipart upload sessions.
+
+    Attributes:
+        None.
+    """
+
+    @abstractmethod
+    def initialize_multipart_upload(
+        self,
+        object_key: str,
+        content_type: str,
+    ) -> str:
+        """Start a multipart upload session."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def generate_signed_part_url(
+        self,
+        object_key: str,
+        upload_id: str,
+        part_number: int,
+    ) -> str:
+        """Generate a signed URL for a multipart upload part."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def complete_multipart_upload(
+        self,
+        object_key: str,
+        upload_id: str,
+        parts: list[dict[str, Any]],
+    ) -> None:
+        """Finalize a multipart upload."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def abort_multipart_upload(
+        self,
+        object_key: str,
+        upload_id: str,
+    ) -> None:
+        """Abort a multipart upload."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def cleanup_temporary_parts(
+        self,
+        object_key: str,
+        upload_id: str,
+    ) -> None:
+        """Remove temporary multipart upload data."""
+        raise NotImplementedError
 
 
 class BlobStorageAdapter(StorageAdapter):
@@ -9,13 +71,10 @@ class BlobStorageAdapter(StorageAdapter):
 
     This class implements the StorageAdapter contract for cloud storage operations,
     allowing workflows and services to read, write, verify, and delete dataset files
-    without depending directly on Azure-specific APIs. It is mainly used by
-    preparation workflows to load raw uploaded files and persist prepared files,
-    such as Parquet datasets.
+    without depending directly on Azure-specific APIs.
 
     Attributes:
-        client (BlobServiceClient): Azure Blob Storage client used to access
-            containers and blobs.
+        client: Azure Blob Storage client used to access containers and blobs.
     """
 
     def __init__(self, connection_string: str | None):
@@ -27,23 +86,6 @@ class BlobStorageAdapter(StorageAdapter):
     async def read_file(self, container: str, path: str) -> bytes:
         """
         Reads a file from Azure Blob Storage.
-
-        Retrieves the blob identified by the provided container and object key,
-        returning its content as raw bytes.
-
-        Args:
-            container (str):
-                Name of the blob storage container.
-            path (str):
-                Object key (blob path) of the file to be read.
-
-        Returns:
-            bytes:
-                Raw content of the requested blob.
-
-        Raises:
-            FileNotFoundError:
-                If the blob does not exist in the specified container.
         """
         blob_client = self.client.get_blob_client(
             container=container,
@@ -59,21 +101,6 @@ class BlobStorageAdapter(StorageAdapter):
     async def write_file(self, container: str, path: str, data: bytes) -> str:
         """
         Writes a file to Azure Blob Storage.
-
-        Uploads the provided binary content to the specified container using the
-        given object key. Existing blobs are overwritten.
-
-        Args:
-            container (str):
-                Name of the destination blob container.
-            path (str):
-                Object key (blob path) where the file will be stored.
-            data (bytes):
-                Binary content to upload.
-
-        Returns:
-            str:
-                Object key of the uploaded blob.
         """
         blob_client = self.client.get_blob_client(
             container=container,
@@ -81,22 +108,11 @@ class BlobStorageAdapter(StorageAdapter):
         )
 
         blob_client.upload_blob(data, overwrite=True)
-
         return path
 
     async def file_exists(self, container: str, path: str) -> bool:
         """
         Checks whether a file exists in Azure Blob Storage.
-
-        Args:
-            container (str):
-                Name of the blob storage container.
-            path (str):
-                Object key (blob path) to verify.
-
-        Returns:
-            bool:
-                True if the blob exists; otherwise False.
         """
         blob_client = self.client.get_blob_client(
             container=container,
@@ -108,19 +124,6 @@ class BlobStorageAdapter(StorageAdapter):
     async def delete_file(self, container: str, path: str) -> bool:
         """
         Deletes a file from Azure Blob Storage.
-
-        If the specified blob exists, it is permanently removed from the container.
-
-        Args:
-            container (str):
-                Name of the blob storage container.
-            path (str):
-                Object key (blob path) of the file to delete.
-
-        Returns:
-            bool:
-                True if the file was deleted successfully, or False if the blob
-                does not exist.
         """
         blob_client = self.client.get_blob_client(
             container=container,
