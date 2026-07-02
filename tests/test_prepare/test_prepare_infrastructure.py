@@ -137,13 +137,16 @@ class PrepareDependenciesTest(unittest.IsolatedAsyncioTestCase):
     async def test_get_db_pool_creates_and_reuses_pool(self):
         expected_pool = object()
 
-        with patch(
-            "app.prepare.dependencies.get_settings",
-            return_value=make_settings(),
-        ), patch(
-            "app.prepare.dependencies.asyncpg.create_pool",
-            new=AsyncMock(return_value=expected_pool),
-        ) as create_pool:
+        with (
+            patch(
+                "app.prepare.dependencies.get_settings",
+                return_value=make_settings(),
+            ),
+            patch(
+                "app.prepare.dependencies.asyncpg.create_pool",
+                new=AsyncMock(return_value=expected_pool),
+            ) as create_pool,
+        ):
             first_pool = await dependencies.get_db_pool()
             second_pool = await dependencies.get_db_pool()
 
@@ -185,13 +188,16 @@ class PrepareDependenciesTest(unittest.IsolatedAsyncioTestCase):
     async def test_get_storage_adapter_returns_blob_adapter_for_azure(self):
         fake_blob_adapter = object()
 
-        with patch(
-            "app.prepare.dependencies.get_settings",
-            return_value=make_settings(storage_type="azure"),
-        ), patch(
-            "app.prepare.dependencies.BlobStorageAdapter",
-            Mock(return_value=fake_blob_adapter),
-        ) as blob_adapter:
+        with (
+            patch(
+                "app.prepare.dependencies.get_settings",
+                return_value=make_settings(storage_type="azure"),
+            ),
+            patch(
+                "app.prepare.dependencies.BlobStorageAdapter",
+                Mock(return_value=fake_blob_adapter),
+            ) as blob_adapter,
+        ):
             storage = await dependencies.get_storage_adapter()
 
         self.assertIs(storage, fake_blob_adapter)
@@ -201,12 +207,15 @@ class PrepareDependenciesTest(unittest.IsolatedAsyncioTestCase):
         repository = object()
         storage = object()
 
-        with patch(
-            "app.prepare.dependencies.get_dataset_repository",
-            new=AsyncMock(return_value=repository),
-        ), patch(
-            "app.prepare.dependencies.get_storage_adapter",
-            new=AsyncMock(return_value=storage),
+        with (
+            patch(
+                "app.prepare.dependencies.get_dataset_repository",
+                new=AsyncMock(return_value=repository),
+            ),
+            patch(
+                "app.prepare.dependencies.get_storage_adapter",
+                new=AsyncMock(return_value=storage),
+            ),
         ):
             controller = await dependencies.get_dataset_preparation_controller()
 

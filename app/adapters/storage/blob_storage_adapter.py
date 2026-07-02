@@ -84,7 +84,6 @@ class BlobStorageAdapter(StorageAdapter):
 
         return path
 
-
     async def file_exists(self, container: str, path: str) -> bool:
         """
         Checks whether a file exists in Azure Blob Storage.
@@ -105,7 +104,6 @@ class BlobStorageAdapter(StorageAdapter):
         )
 
         return blob_client.exists()
-
 
     async def delete_file(self, container: str, path: str) -> bool:
         """

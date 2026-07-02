@@ -49,8 +49,8 @@ class SchemaInfererTest(unittest.TestCase):
             }
         )
 
-        processed_df, schema, rows_count, columns_count = SchemaInferer.process_dataframe(
-            df
+        processed_df, schema, rows_count, columns_count = (
+            SchemaInferer.process_dataframe(df)
         )
 
         self.assertEqual(rows_count, 10)
@@ -72,7 +72,9 @@ class SchemaInfererTest(unittest.TestCase):
         self.assertEqual(processed_df["paid"].tolist()[:2], [True, False])
 
         self.assertEqual(schema_by_name["created_at"].data_type, "datetime")
-        self.assertTrue(pd.api.types.is_datetime64_any_dtype(processed_df["created_at"]))
+        self.assertTrue(
+            pd.api.types.is_datetime64_any_dtype(processed_df["created_at"])
+        )
 
         self.assertEqual(schema_by_name["notes"].data_type, "string")
         self.assertEqual(processed_df.loc[0, "notes"], "ok")
@@ -81,8 +83,8 @@ class SchemaInfererTest(unittest.TestCase):
     def test_process_dataframe_infers_empty_series_as_nullable_string(self):
         df = pd.DataFrame({"Empty": [None, None, None]})
 
-        processed_df, schema, rows_count, columns_count = SchemaInferer.process_dataframe(
-            df
+        processed_df, schema, rows_count, columns_count = (
+            SchemaInferer.process_dataframe(df)
         )
 
         self.assertEqual(rows_count, 3)
