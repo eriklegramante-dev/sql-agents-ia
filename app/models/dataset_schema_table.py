@@ -25,7 +25,9 @@ class ColumnSchema(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     name: str = Field(..., description="Normalized column name.")
-    original_name: str = Field(..., description="Original column name in the source file.")
+    original_name: str = Field(
+        ..., description="Original column name in the source file."
+    )
     data_type: str = Field(
         ...,
         validation_alias=AliasChoices("data_type", "type"),
@@ -81,7 +83,9 @@ class DatasetSchemaTable(Base):
         unique=True,
     )
     columns = Column(JSONB, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
     updated_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),

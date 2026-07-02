@@ -5,7 +5,11 @@ from app.adapters.storage.base import StorageAdapter
 from app.database.dataset_repository import DatasetRepository
 from app.enums.dataset_status import DatasetStatus
 from app.logs.prepare_logger import PrepareLogger
-from app.prepare.exceptions import ConflictException, NotFoundException, StorageException
+from app.prepare.exceptions import (
+    ConflictException,
+    NotFoundException,
+    StorageException,
+)
 from app.routes.prepare.dtos.dto import DatasetPreparationDataDTO
 from app.routes.prepare.helpers.dataframe.dataframe_reader import DataFrameReader
 from app.routes.prepare.helpers.parquet.parquet_writer import ParquetWriter
@@ -95,9 +99,7 @@ class DatasetPreparationWorkflow:
                 SchemaInferer.process_dataframe(dataframe)
             )
 
-            parquet_data = ParquetWriter.dataframe_to_parquet_bytes(
-                processed_dataframe
-            )
+            parquet_data = ParquetWriter.dataframe_to_parquet_bytes(processed_dataframe)
 
             await self.storage.write_file(
                 self.prepared_container,

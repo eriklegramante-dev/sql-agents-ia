@@ -42,7 +42,6 @@ class AgentPreferencesController:
         try:
             raw_data = self.service.get_user_preferences(user_id_raw)
 
-            # Pydantic V2 standard parsing method
             preferences_data = AgentPreferencesData.model_validate(raw_data)
 
             return AgentPreferencesResponse(

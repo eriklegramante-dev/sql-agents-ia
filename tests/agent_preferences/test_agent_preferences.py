@@ -2,6 +2,7 @@ import pytest
 from app.core.agent_preferences.workflow import AgentPreferencesWorkflow
 from app.settings.setting import get_settings
 
+
 class TestAgentPreferencesRead:
     def test_retrieval_success_with_existing_preferences(self, mock_repository):
         workflow = AgentPreferencesWorkflow(repository=mock_repository)

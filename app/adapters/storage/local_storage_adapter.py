@@ -27,7 +27,6 @@ class LocalStorageAdapter(StorageAdapter):
     def _get_full_path(self, container: str, path: str) -> Path:
         return self.base_path / container / path
 
-
     async def read_file(self, container: str, path: str) -> bytes:
         """
         Reads a file from the local filesystem.
@@ -52,12 +51,9 @@ class LocalStorageAdapter(StorageAdapter):
         full_path = self._get_full_path(container, path)
 
         if not full_path.exists():
-            raise FileNotFoundError(
-                f"File {path} not found in container {container}"
-            )
+            raise FileNotFoundError(f"File {path} not found in container {container}")
 
         return full_path.read_bytes()
-
 
     async def write_file(self, container: str, path: str, data: bytes) -> str:
         """
@@ -84,7 +80,6 @@ class LocalStorageAdapter(StorageAdapter):
 
         return path
 
-
     async def file_exists(self, container: str, path: str) -> bool:
         """
         Checks whether a file exists in the local filesystem.
@@ -100,7 +95,6 @@ class LocalStorageAdapter(StorageAdapter):
                 True if the file exists, otherwise False.
         """
         return self._get_full_path(container, path).exists()
-
 
     async def delete_file(self, container: str, path: str) -> bool:
         """
