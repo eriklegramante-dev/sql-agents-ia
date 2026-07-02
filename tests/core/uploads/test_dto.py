@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from app.routes.uploads.dto import UploadInitRequestDTO
+from app.routes.uploads.dtos.dto import UploadInitRequestDTO
 
 
 def test_upload_init_request_rejects_blank_dataset_name() -> None:

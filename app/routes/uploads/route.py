@@ -1,7 +1,7 @@
 from fastapi import APIRouter, status
 
-from app.routes.uploads.controller import UploadController
-from app.routes.uploads.dto import UploadInitRequestDTO, UploadInitResponseDTO
+from app.routes.uploads.controllers.controller import UploadController
+from app.routes.uploads.dtos.dto import UploadInitRequestDTO, UploadInitResponseDTO
 
 router = APIRouter(prefix="/uploads", tags=["Uploads"])
 

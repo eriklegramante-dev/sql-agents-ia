@@ -1,5 +1,5 @@
-from app.routes.uploads.dto import UploadInitRequestDTO
-from app.routes.uploads.service import UploadService
+from app.routes.uploads.dtos.dto import UploadInitRequestDTO
+from app.routes.uploads.services.service import UploadService
 
 
 class FakeInitWorkflow:

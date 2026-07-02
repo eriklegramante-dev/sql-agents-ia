@@ -1,8 +1,8 @@
 from fastapi import status
 from fastapi.responses import JSONResponse
 
-from app.routes.uploads.controller import UploadController
-from app.routes.uploads.dto import UploadInitRequestDTO
+from app.routes.uploads.controllers.controller import UploadController
+from app.routes.uploads.dtos.dto import UploadInitRequestDTO
 
 
 class FakeUploadService:

@@ -3,12 +3,12 @@ from typing import Optional
 from fastapi import status
 from fastapi.responses import JSONResponse
 
-from app.routes.uploads.dto import (
+from app.routes.uploads.dtos.dto import (
     UploadInitRequestDTO,
     UploadInitResponseDataDTO,
     UploadInitResponseDTO,
 )
-from app.routes.uploads.service import UploadService
+from app.routes.uploads.services.service import UploadService
 from app.logs.setup_logger import LOGGER
 
 

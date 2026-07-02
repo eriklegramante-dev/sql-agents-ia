@@ -1,7 +1,7 @@
 import pytest
 
 from app.adapters.storage.fake_blob_storage_adapter import FakeBlobStorageAdapter
-from app.routes.uploads.dto import UploadInitRequestDTO
+from app.routes.uploads.dtos.dto import UploadInitRequestDTO
 from app.core.uploads.workflow import UploadInitializationWorkflow
 from app.repositories.in_memory_upload_metadata_repository import (
     InMemoryUploadMetadataRepository,
