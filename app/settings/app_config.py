@@ -1,16 +1,18 @@
-from app.settings.setting import get_settings, Environment
+from app.settings.setting import Environment, get_settings
 
 
 class AppConfig:
     """
-    Application configuration handler, including dynamic root path resolution
-    based on the current environment.
+    Application configuration helper.
     """
 
-    def __init__(self):
-        self.environment = get_settings().env.environment
-
     def get_root_path(self) -> str:
-        if self.environment == Environment.PROD:
+        """
+        Return the application root path.
+        """
+        if get_settings().env.environment == Environment.PROD:
             return "/crud/prod"
         return ""
+
+
+app_config = AppConfig()

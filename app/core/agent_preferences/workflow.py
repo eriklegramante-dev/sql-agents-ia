@@ -1,5 +1,5 @@
 from typing import Optional, Dict, Any
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 from app.agents.repository import AgentPreferencesRepository
 from app.settings.setting import get_settings
 
@@ -62,7 +62,7 @@ class AgentPreferencesWorkflow:
             Dict[str, Any]: A dictionary containing standard persona configurations, fallback parameters,
                 and precise timezone-aware creation timestamps.
         """
-        now = datetime.now(UTC)
+        now = datetime.now(timezone.utc)
 
         return {
             "user_id": user_id,
