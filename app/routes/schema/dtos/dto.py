@@ -4,6 +4,18 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class DatasetSchemaRequestDTO(BaseModel):
+    """Represents the request for dataset schema retrieval.
+
+    Contains the dataset identifier validated before the request reaches
+    the controller, service, and workflow layers.
+    """
+
+    dataset_id: UUID = Field(
+        ...,
+        description="Unique identifier of the dataset.",
+    )
+
 class DatasetSchemaColumnDTO(BaseModel):
     """Represents the inferred schema information for a dataset column.
 

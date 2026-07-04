@@ -1,10 +1,12 @@
 import asyncpg
 
+from app.core.schema.workflow import DatasetSchemaWorkflow
 from app.database.dataset_repository import DatasetRepository
+from app.logs.setup_logger import LOGGER
 from app.routes.schema.controllers.controller import DatasetSchemaController
 from app.routes.schema.services.service import DatasetSchemaService
-from app.core.schema.workflow import DatasetSchemaWorkflow
 from app.settings.setting import get_settings
+
 
 _db_pool: asyncpg.Pool | None = None
 
@@ -65,7 +67,16 @@ async def get_dataset_schema_controller() -> DatasetSchemaController:
     """
     repository = await get_dataset_repository()
 
-    workflow = DatasetSchemaWorkflow(repository)
-    service = DatasetSchemaService(workflow)
+    workflow = DatasetSchemaWorkflow(
+        dataset_repository=repository,
+        logger=LOGGER,
+    )
+    service = DatasetSchemaService(
+        workflow=workflow,
+        logger=LOGGER
+    )
 
-    return DatasetSchemaController(service)
+    return DatasetSchemaController(
+        service=service,
+        logger=LOGGER,
+    )

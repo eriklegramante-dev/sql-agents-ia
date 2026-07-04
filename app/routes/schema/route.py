@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path
 from app.prepare.exceptions import AppException
 from app.routes.schema.controllers.controller import DatasetSchemaController
 from app.routes.schema.dependencies.dependence import get_dataset_schema_controller
+from app.routes.schema.dtos.dto import DatasetSchemaResponseDTO
 
 
 router = APIRouter()
@@ -40,7 +41,6 @@ async def get_dataset_schema(
 
     try:
         return await controller.get_dataset_schema(dataset_id)
-
     except AppException as error:
         raise HTTPException(
             status_code=error.status_code,
@@ -51,7 +51,6 @@ async def get_dataset_schema(
                 "errors": error.details,
             },
         )
-
     except Exception as error:
         raise HTTPException(
             status_code=500,

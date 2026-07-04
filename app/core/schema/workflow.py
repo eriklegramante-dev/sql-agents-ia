@@ -1,12 +1,15 @@
+from typing import Optional
 from uuid import UUID
 
 from app.database.dataset_repository import DatasetRepository
+from app.enums.dataset_status import DatasetStatus
+from app.logs.setup_logger import LOGGER, LoggerManager
+from app.prepare.exceptions import ConflictException, NotFoundException
 from app.routes.schema.dtos.dto import (
     DatasetSchemaColumnDTO,
     DatasetSchemaResponseDataDTO,
 )
-from app.prepare.exceptions import ConflictException, NotFoundException
-from app.enums.dataset_status import DatasetStatus
+
 
 class DatasetSchemaWorkflow:
     """Orchestrates the dataset schema retrieval process.
@@ -23,7 +26,8 @@ class DatasetSchemaWorkflow:
 
     def __init__(
         self,
-        dataset_repository: DatasetRepository,
+        dataset_repository: Optional[DatasetRepository] = None,
+        logger: Optional[LoggerManager] = None,
     ) -> None:
         """Initializes the dataset schema workflow.
 
@@ -31,9 +35,14 @@ class DatasetSchemaWorkflow:
             dataset_repository (DatasetRepository):
                 Repository responsible for dataset lookup and schema
                 persistence operations.
+
+            logger (Optional[LoggerManager]):
+            Project logger used to trace workflow execution. Defaults to
+            the shared application logger when omitted.
         """
 
-        self.repository = dataset_repository
+        self.repository = dataset_repository or DatasetRepository()
+        self.logger = logger or LOGGER
 
     async def execute(
         self,
@@ -61,28 +70,43 @@ class DatasetSchemaWorkflow:
                 metadata is available for the specified dataset.
         """
 
+        self.logger.log_info(f"Starting schema retrieval workflow for dataset {dataset_id}.")
+
         dataset = await self.repository.get_by_id(dataset_id)
 
         if dataset is None:
+            self.logger.log_warning(f"Dataset with ID {dataset_id} not found.")
             raise NotFoundException(
-                f"Dataset with ID {dataset_id} not found."
+                f"Dataset with ID {dataset_id} not found.")
+
+
+        current_status = (
+            dataset.status.value
+            if hasattr(dataset.status, "value")
+            else dataset.status
+        )                       
+
+        if dataset.status != DatasetStatus.PREPARED:
+            self.logger.log_warning(
+                f"Dataset {dataset_id} is not in a prepared state. Current status: {current_status}."
+            )
+            raise ConflictException(
+                f"Dataset schema is not available yet. Please prepare the dataset first."
             )
 
         schema = await self.repository.get_schema(dataset_id)
 
         if not schema:
+            self.logger.log_warning(f"No schema metadata found for dataset {dataset_id}.")
             raise NotFoundException(
                 f"No schema metadata found for dataset {dataset_id}."
             )
 
-        if dataset.status.value != DatasetStatus.PREPARED:
-            raise ConflictException(
-                f"Dataset schema is not available yet. Please prepare the dataset first."
-            )
+        self.logger.log_info(f"Successfully retrieved schema for dataset {dataset_id}.")
 
         return DatasetSchemaResponseDataDTO(
             dataset_id=dataset.id,
-            status=dataset.status.value,
+            status=current_status,
             columns_count=len(schema),
             schema_columns=[
                 DatasetSchemaColumnDTO(
@@ -90,8 +114,8 @@ class DatasetSchemaWorkflow:
                     original_name=column.original_name,
                     type=column.data_type,
                     nullable=column.nullable,
-                    sample_values=column.sample_values,
-                    warnings=column.warnings,
+                    sample_values=column.sample_values or [],
+                    warnings=column.warnings or [],
                 )
                 for column in schema
             ],

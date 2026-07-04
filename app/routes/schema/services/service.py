@@ -1,5 +1,7 @@
 from uuid import UUID
+from typing import Optional
 
+from app.logs.setup_logger import LOGGER, LoggerManager
 from app.routes.schema.dtos.dto import DatasetSchemaResponseDataDTO
 from app.core.schema.workflow import DatasetSchemaWorkflow
 
@@ -20,7 +22,8 @@ class DatasetSchemaService:
 
     def __init__(
         self,
-        workflow: DatasetSchemaWorkflow,
+        workflow: Optional[DatasetSchemaWorkflow] = None,
+        logger: Optional[LoggerManager] = None,
     ) -> None:
         """Initializes the dataset schema service.
 
@@ -30,7 +33,8 @@ class DatasetSchemaService:
                 retrieval business logic.
         """
 
-        self.workflow = workflow
+        self.logger = logger or LOGGER
+        self.workflow = workflow or DatasetSchemaWorkflow(logger=self.logger)
 
     async def get_dataset_schema(
         self,
@@ -53,4 +57,13 @@ class DatasetSchemaService:
                 inferred schema information.
         """
 
-        return await self.workflow.execute(dataset_id)
+        self.logger.log_info(
+            f"Service layer: Initiating schema retrieval for dataset {dataset_id}."
+        )
+
+        response = await self.workflow.execute(dataset_id)
+
+        self.logger.log_info(
+            f"Dataset schema retrieval completed for dataset {dataset_id}."
+        )
+        return response
