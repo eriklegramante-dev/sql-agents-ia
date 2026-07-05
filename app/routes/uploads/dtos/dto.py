@@ -87,3 +87,45 @@ class UploadInitResponseDTO(BaseModel):
     success: bool
     message: str
     data: UploadInitResponseDataDTO
+    
+
+class UploadAbortRequestDTO(BaseModel):
+    """Request payload used to abort a multipart upload.
+
+    Attributes:
+        dataset_id: Dataset identifier associated with the upload.
+        upload_id: Multipart upload identifier to abort.
+    """
+
+    dataset_id: UUID | str = Field(...)
+    upload_id: str = Field(..., min_length=1)
+
+
+class UploadAbortResponseDataDTO(BaseModel):
+    """Response data returned after upload abort execution.
+
+    Attributes:
+        dataset_id: Dataset identifier associated with the upload.
+        upload_id: Multipart upload identifier.
+        upload_status: Final upload status after abort processing.
+        dataset_status: Final dataset status after abort processing.
+    """
+
+    dataset_id: UUID | str
+    upload_id: str
+    upload_status: str
+    dataset_status: str
+
+
+class UploadAbortResponseDTO(BaseModel):
+    """Standard response returned by the upload abort route.
+
+    Attributes:
+        success: Indicates whether the request was processed successfully.
+        message: Human-readable response message.
+        data: Upload abort response data.
+    """
+
+    success: bool
+    message: str
+    data: UploadAbortResponseDataDTO
