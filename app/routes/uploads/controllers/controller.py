@@ -3,7 +3,7 @@ from typing import Optional
 from fastapi import status
 from fastapi.responses import JSONResponse
 
-from app.logs.setup_logger import LOGGER
+from app.logs.setup_logger import LOGGER, LoggerManager, LoggerManager
 from app.routes.uploads.dtos.dto import (
     UploadAbortRequestDTO,
     UploadAbortResponseDTO,
@@ -22,13 +22,18 @@ class UploadController:
         service: Upload service used to process upload use cases.
     """
 
-    def __init__(self, service: Optional[UploadService] = None) -> None:
+    def __init__(
+        self,
+        service: Optional[UploadService] = None,
+        logger: Optional[LoggerManager] = None,
+    ) -> None:
         """Initialize the upload controller.
 
         Args:
             service: Upload service used to process requests.
         """
         self.service = service or UploadService()
+        self.logger = logger or LOGGER
 
     def initialize_upload(
         self,
@@ -43,7 +48,7 @@ class UploadController:
             Standardized JSON response.
         """
         try:
-            LOGGER.log_info(
+            self.logger.log_info(
                 "[upload:init:controller] Received upload initialization request"
             )
             result = self.service.initialize_upload(request)
@@ -53,7 +58,7 @@ class UploadController:
                 data=UploadInitResponseDataDTO(**result),
             )
 
-            LOGGER.log_info(
+            self.logger.log_info(
                 "[upload:init:controller] Upload initialization response created"
             )
 
@@ -62,7 +67,7 @@ class UploadController:
                 content=response.model_dump(mode="json"),
             )
         except ValueError as exc:
-            LOGGER.log_warning(
+            self.logger.log_warning(
                 f"[upload:init:controller] Upload initialization validation failed: {exc}"
             )
             return JSONResponse(
@@ -87,7 +92,7 @@ class UploadController:
             Standardized JSON response containing final upload statuses.
         """
         try:
-            LOGGER.log_info("[upload:abort:controller] Received upload abort request")
+            self.logger.log_info("[upload:abort:controller] Received upload abort request")
 
             result = self.service.abort_upload(
                 dataset_id=str(request.dataset_id),
@@ -99,14 +104,14 @@ class UploadController:
                 data=UploadAbortResponseDataDTO(**result),
             )
 
-            LOGGER.log_info("[upload:abort:controller] Upload abort response created")
+            self.logger.log_info("[upload:abort:controller] Upload abort response created")
 
             return JSONResponse(
                 status_code=status.HTTP_200_OK,
                 content=response.model_dump(mode="json"),
             )
         except ValueError as exc:
-            LOGGER.log_warning(
+            self.logger.log_warning(
                 f"[upload:abort:controller] Upload abort validation failed: {exc}"
             )
             return JSONResponse(
@@ -118,7 +123,7 @@ class UploadController:
                 },
             )
         except RuntimeError as exc:
-            LOGGER.log_error(
+            self.logger.log_error(
                 f"[upload:abort:controller] Upload abort processing failed: {exc}"
             )
             return JSONResponse(

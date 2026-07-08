@@ -14,6 +14,10 @@ class UploadAbortWorkflow:
         repository: Repository used to load and update upload metadata.
         storage_adapter: Adapter used to abort multipart uploads and cleanup parts.
         cancelable_statuses: Upload statuses that can be aborted.
+
+    Args:
+        repository: Repository used to load and update upload metadata.
+        storage_adapter: Adapter used to abort multipart uploads and cleanup parts.
     """
 
     def __init__(

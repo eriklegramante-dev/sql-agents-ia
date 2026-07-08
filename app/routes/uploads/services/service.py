@@ -15,6 +15,7 @@ class UploadService:
     """Service responsible for exposing upload use cases.
 
     Attributes:
+        workflow: Main workflow alias used for upload initialization.
         init_workflow: Workflow responsible for upload initialization.
         abort_workflow: Workflow responsible for upload abort.
     """
@@ -30,18 +31,26 @@ class UploadService:
         Args:
             init_workflow: Optional workflow used to initialize uploads.
             abort_workflow: Optional workflow used to abort uploads.
+            workflow: Optional legacy alias for the upload initialization workflow.
         """
+        selected_init_workflow = init_workflow or workflow
+
+        if selected_init_workflow is not None or abort_workflow is not None:
+            self.workflow = selected_init_workflow
+            self.init_workflow = self.workflow
+            self.abort_workflow = abort_workflow
+            return
+
         repository = InMemoryUploadMetadataRepository()
         storage_adapter = self._build_storage_adapter()
 
-        selected_init_workflow = init_workflow or workflow
-
-        self.init_workflow = selected_init_workflow or UploadInitializationWorkflow(
+        self.workflow = UploadInitializationWorkflow(
             repository=repository,
             storage_adapter=storage_adapter,
             config=get_settings().upload,
         )
-        self.abort_workflow = abort_workflow or UploadAbortWorkflow(
+        self.init_workflow = self.workflow
+        self.abort_workflow = UploadAbortWorkflow(
             repository=repository,
             storage_adapter=storage_adapter,
         )
@@ -56,7 +65,7 @@ class UploadService:
             Upload initialization result data.
         """
         LOGGER.log_info("[upload:init:service] Starting upload initialization")
-        result = self.init_workflow.run(request)
+        result = self.workflow.run(request)
         LOGGER.log_info("[upload:init:service] Upload initialization finished")
         return result
 
