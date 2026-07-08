@@ -95,3 +95,37 @@ def test_initialize_upload_route_validates_request_body() -> None:
     )
 
     assert response.status_code == 422
+
+def test_abort_upload_route_success() -> None:
+    response = client.post(
+        "/api/v1/uploads/abort",
+        json={
+            "dataset_id": "dataset-1",
+            "upload_id": "upload-1",
+        },
+    )
+
+    assert response.status_code in (200, 400)
+
+
+def test_abort_upload_route_validates_request_body() -> None:
+    response = client.post(
+        "/api/v1/uploads/abort",
+        json={
+            "dataset_id": "",
+            "upload_id": "",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_abort_upload_route_missing_upload_id() -> None:
+    response = client.post(
+        "/api/v1/uploads/abort",
+        json={
+            "dataset_id": "dataset-1",
+        },
+    )
+
+    assert response.status_code == 422

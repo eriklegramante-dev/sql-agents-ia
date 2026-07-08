@@ -57,3 +57,49 @@ def test_initialize_upload_returns_bad_request_on_value_error() -> None:
 
     assert isinstance(response, JSONResponse)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
+    
+
+class FakeAbortService:
+    def abort_upload(self, dataset_id: str, upload_id: str) -> dict:
+        return {
+            "dataset_id": dataset_id,
+            "upload_id": upload_id,
+            "upload_status": "ABORTED",
+            "dataset_status": "ABORTED",
+        }
+
+
+class FakeFailAbortService:
+    def abort_upload(self, dataset_id: str, upload_id: str) -> dict:
+        raise ValueError("Upload cannot be aborted")
+
+
+def make_abort_request():
+    return type(
+        "AbortRequest",
+        (),
+        {
+            "dataset_id": "dataset-1",
+            "upload_id": "upload-1",
+        },
+    )()
+
+
+def test_abort_upload_controller_success() -> None:
+    controller = UploadController(service=FakeAbortService())
+    request = make_abort_request()
+
+    response = controller.abort_upload(request)
+
+    assert isinstance(response, JSONResponse)
+    assert response.status_code == 200
+
+
+def test_abort_upload_controller_failure() -> None:
+    controller = UploadController(service=FakeFailAbortService())
+    request = make_abort_request()
+
+    response = controller.abort_upload(request)
+
+    assert isinstance(response, JSONResponse)
+    assert response.status_code == 400
