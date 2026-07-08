@@ -6,6 +6,7 @@ class AppConfig:
     Application configuration helper.
     """
 
+
     def get_root_path(self) -> str:
         """
         Return the application root path.
