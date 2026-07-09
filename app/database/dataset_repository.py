@@ -261,3 +261,53 @@ class DatasetRepository(BaseRepository[DatasetTable]):
             columns = json.loads(columns)
 
         return [ColumnSchema(**column) for column in columns]
+
+
+    async def save_profile(
+        self,
+        dataset_id: UUID,
+        profile: dict,
+    ) -> bool:
+        """
+        Persist dataset profiling metadata.
+
+        Creates or updates the profiling metadata associated with a dataset.
+        The profile is stored as JSONB in the ``dataset_profiles`` table.
+
+        Args:
+            dataset_id:
+                Identifier of the dataset.
+            profile:
+                Generated profiling metadata.
+
+        Returns:
+            bool:
+                True when the profile is successfully persisted.
+        """
+        async with self.pool.acquire() as connection:
+            result = await connection.execute(
+                """
+                INSERT INTO dataset_profiles (
+                    id,
+                    dataset_id,
+                    profile,
+                    created_at,
+                    updated_at
+                )
+                VALUES (
+                    gen_random_uuid(),
+                    $1,
+                    $2::jsonb,
+                    NOW(),
+                    NOW()
+                )
+                ON CONFLICT (dataset_id)
+                DO UPDATE SET
+                    profile = EXCLUDED.profile,
+                    updated_at = NOW()
+                """,
+                dataset_id,
+                json.dumps(profile),
+            )
+
+        return result in ("INSERT 0 1", "UPDATE 1")
