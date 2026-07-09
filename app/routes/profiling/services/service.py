@@ -14,6 +14,19 @@ class DatasetProfileService:
     workflow. It delegates the profiling process to the workflow and returns
     its response without containing business rules, persistence logic, storage
     access, or FastAPI-specific behavior.
+
+    Args:
+        workflow:
+            Workflow responsible for executing the dataset profiling process.
+        logger:
+            Logger manager used to record service execution events.
+
+    Attributes:
+        workflow:
+            Workflow responsible for coordinating the profiling business logic.
+        logger:
+            Logger used to record service execution events.
+
     """
 
     def __init__(
@@ -21,15 +34,6 @@ class DatasetProfileService:
         workflow: Optional[DatasetProfileWorkflow] = None,
         logger: Optional[LoggerManager] = None,
     ) -> None:
-        """
-        Initialize the dataset profiling service.
-
-        Args:
-            workflow:
-                Workflow responsible for executing the profiling process.
-            logger:
-                Logger manager used to record service events.
-        """
         self.workflow = workflow or DatasetProfileWorkflow()
         self.logger = (logger or LOGGER).logger
 

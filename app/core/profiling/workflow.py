@@ -35,6 +35,29 @@ class DatasetProfileWorkflow:
 
     The workflow does not contain HTTP-specific behavior and does not perform
     profiling calculations directly.
+
+    Args:
+        repository:
+            Repository responsible for dataset persistence operations.
+        storage_adapter:
+            Adapter responsible for loading prepared dataset files.
+        profile_calculator:
+            Helper responsible for calculating profiling metadata.
+        logger:
+            Logger manager used to record workflow events.
+
+    Attributes:
+        repository:
+            Repository used to access dataset metadata.
+        storage_adapter:
+            Storage adapter used to load prepared datasets.
+        profile_calculator:
+            Helper responsible for generating profiling metadata.
+        logger:
+            Logger used to record workflow execution.
+        prepared_container:
+            Storage container where prepared datasets are stored.
+    
     """
 
     def __init__(
@@ -44,19 +67,6 @@ class DatasetProfileWorkflow:
         profile_calculator: Optional[ProfileCalculator] = None,
         logger: Optional[LoggerManager] = None,
     ) -> None:
-        """
-        Initialize the dataset profiling workflow.
-
-        Args:
-            repository:
-                Repository responsible for dataset persistence operations.
-            storage_adapter:
-                Adapter responsible for loading prepared dataset files.
-            profile_calculator:
-                Helper responsible for calculating profiling metadata.
-            logger:
-                Logger manager used to record workflow events.
-        """
         self.repository = repository
         self.storage_adapter = storage_adapter
         self.profile_calculator = profile_calculator or ProfileCalculator()

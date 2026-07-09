@@ -5,12 +5,15 @@ import pandas as pd
 
 class StatisticsCalculator:
     """
-    Helper responsible for calculating basic numeric statistics.
+    Helper responsible for calculating descriptive statistics for numeric data.
 
-    This helper computes descriptive statistical metrics for numeric data.
-    It supports calculations for individual dataframe columns as well as
-    entire dataframes, returning only meaningful statistics for numeric
-    columns while safely ignoring non-numeric or empty data.
+    This helper provides reusable statistical calculations used during the
+    dataset profiling process. It computes descriptive metrics for individual
+    numeric columns as well as entire dataframes, returning only meaningful
+    statistics while safely ignoring non-numeric columns and empty datasets.
+
+    The generated statistics are intended to enrich the profiling metadata
+    returned by the profiling workflow and persisted for later analysis.
     """
 
     def calculate_for_column(self, series: pd.Series) -> dict[str, Any]:

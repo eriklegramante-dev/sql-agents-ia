@@ -27,6 +27,29 @@ class ProfileCalculator:
     concerns, focusing exclusively on transforming a pandas DataFrame into
     structured profiling metadata that can be persisted and returned by the
     application layers.
+
+    Args:
+        column_classifier:
+            Helper responsible for identifying the semantic type of each
+            dataframe column. When not provided, a default
+            ``ColumnClassifier`` instance is created.
+        statistics_calculator:
+            Helper responsible for computing statistical metrics for columns
+            and the entire dataframe. When not provided, a default
+            ``StatisticsCalculator`` instance is created.
+        quality_checker:
+            Helper responsible for validating dataset quality and generating
+            warning messages. When not provided, a default
+            ``QualityChecker`` instance is created.
+
+    Attributes:
+        column_classifier:
+            Helper responsible for classifying dataframe columns.
+        statistics_calculator:
+            Helper responsible for computing descriptive statistics.
+        quality_checker:
+            Helper responsible for validating data quality and generating
+            quality warnings.
     """
 
     def __init__(
@@ -35,20 +58,6 @@ class ProfileCalculator:
         statistics_calculator: Optional[StatisticsCalculator] = None,
         quality_checker: Optional[QualityChecker] = None,
     ) -> None:
-        """
-        Initialize the profile calculator.
-
-        Args:
-            column_classifier: Helper responsible for identifying the semantic
-                type of each dataframe column. When not provided, a default
-                ColumnClassifier instance is created.
-            statistics_calculator: Helper responsible for computing statistical
-                metrics for columns and the entire dataframe. When not provided,
-                a default StatisticsCalculator instance is created.
-            quality_checker: Helper responsible for validating dataset quality
-                and generating warning messages. When not provided, a default
-                QualityChecker instance is created.
-        """
         self.column_classifier = column_classifier or ColumnClassifier()
         self.statistics_calculator = statistics_calculator or StatisticsCalculator()
         self.quality_checker = quality_checker or QualityChecker()

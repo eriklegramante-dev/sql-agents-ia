@@ -19,6 +19,20 @@ class DatasetProfileController:
 
     The controller does not contain profiling calculations, database access,
     storage logic, or HTTP exception handling.
+
+    Args:
+        service:
+            Service responsible for executing the dataset profiling use case.
+        logger:
+            Logger manager used to record controller events.
+
+    Attributes:
+        service:
+            Application service responsible for coordinating the profiling
+            workflow.
+        logger:
+            Logger used to record controller execution events.
+
     """
 
     def __init__(
@@ -26,15 +40,6 @@ class DatasetProfileController:
         service: Optional[DatasetProfileService] = None,
         logger: Optional[LoggerManager] = None,
     ) -> None:
-        """
-        Initialize the dataset profiling controller.
-
-        Args:
-            service:
-                Service responsible for executing the profiling use case.
-            logger:
-                Logger manager used to record controller events.
-        """
         self.service = service or DatasetProfileService()
         self.logger = (logger or LOGGER).logger
 

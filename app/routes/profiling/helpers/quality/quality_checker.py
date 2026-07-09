@@ -5,11 +5,16 @@ class QualityChecker:
     """
     Helper responsible for generating basic data quality warnings.
 
-    This helper analyzes a dataframe and identifies common data quality
-    issues that may impact downstream processing or analytical results.
-    The generated warnings provide a quick overview of potential problems,
-    such as excessive missing values, empty columns, high-cardinality
-    identifiers, and columns containing only a single distinct value.
+    This helper evaluates a dataframe against a set of predefined quality
+    rules and identifies common issues that may affect downstream processing
+    or analytical results. The generated warnings provide a concise overview
+    of potential data quality problems, such as excessive missing values,
+    empty columns, high-cardinality identifiers, and columns containing only
+    a single distinct value.
+
+    The quality assessment is intentionally lightweight and is designed to
+    complement the profiling metadata generated during the dataset profiling
+    workflow without modifying the original dataset.
     """
 
     def check(self, dataframe: pd.DataFrame) -> list[str]:
