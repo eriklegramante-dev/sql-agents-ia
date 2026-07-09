@@ -6,14 +6,22 @@ class UploadStatus(str, Enum):
 
     UPLOADING = "UPLOADING"
     COMPLETED = "COMPLETED"
-    ABORTED = "ABORTED"
+    PREPARING = "PREPARING"
+    PREPARED = "PREPARED"
+    PROFILING = "PROFILING"
+    PROFILED = "PROFILED"
     FAILED = "FAILED"
+    DELETED = "DELETED"
 
 
 class DatasetStatus(str, Enum):
     """Represents the dataset lifecycle status."""
 
     UPLOADING = "UPLOADING"
-    AVAILABLE = "AVAILABLE"
-    ABORTED = "ABORTED"
+    COMPLETED = "COMPLETED"
+    PREPARING = "PREPARING"
+    PREPARED = "PREPARED"
+    PROFILING = "PROFILING"
+    PROFILED = "PROFILED"
     FAILED = "FAILED"
+    DELETED = "DELETED"
