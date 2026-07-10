@@ -11,6 +11,7 @@ class FakeMinioClient:
         self.bucket_exists_result = bucket_exists
         self.created_bucket = None
         self.aborted_upload = None
+        self.completed_upload = None
 
     def bucket_exists(self, bucket_name: str) -> bool:
         return self.bucket_exists_result
@@ -46,6 +47,20 @@ class FakeMinioClient:
             "bucket_name": bucket_name,
             "object_name": object_name,
             "upload_id": upload_id,
+        }
+
+    def _complete_multipart_upload(
+        self,
+        bucket_name: str,
+        object_name: str,
+        upload_id: str,
+        parts: list[dict],
+    ) -> None:
+        self.completed_upload = {
+            "bucket_name": bucket_name,
+            "object_name": object_name,
+            "upload_id": upload_id,
+            "parts": parts,
         }
 
 
@@ -104,19 +119,27 @@ def test_generate_signed_part_url_returns_url() -> None:
     assert upload_url == "http://127.0.0.1:9000/signed-url"
 
 
-def test_complete_multipart_upload_raises_not_implemented() -> None:
+def test_complete_multipart_upload_delegates_to_client() -> None:
+    client = FakeMinioClient()
     adapter = MinioBlobStorageAdapter(
-        client=FakeMinioClient(),
+        client=client,
         bucket_name="bucket",
         signed_url_expires_seconds=3600,
     )
+    parts = [{"part_number": 1, "etag": "etag-1"}]
 
-    with pytest.raises(NotImplementedError):
-        adapter.complete_multipart_upload(
-            object_key="datasets/id/raw/file.csv",
-            upload_id="upload-id",
-            parts=[],
-        )
+    adapter.complete_multipart_upload(
+        object_key="datasets/id/raw/file.csv",
+        upload_id="upload-id",
+        parts=parts,
+    )
+
+    assert client.completed_upload == {
+        "bucket_name": "bucket",
+        "object_name": "datasets/id/raw/file.csv",
+        "upload_id": "upload-id",
+        "parts": parts,
+    }
 
 
 def test_abort_multipart_upload_delegates_to_client() -> None:

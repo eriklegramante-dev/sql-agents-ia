@@ -3,11 +3,14 @@ from typing import Optional
 from fastapi import status
 from fastapi.responses import JSONResponse
 
-from app.logs.setup_logger import LOGGER, LoggerManager, LoggerManager
+from app.logs.setup_logger import LOGGER, LoggerManager
 from app.routes.uploads.dtos.dto import (
     UploadAbortRequestDTO,
     UploadAbortResponseDTO,
     UploadAbortResponseDataDTO,
+    UploadCompleteRequestDTO,
+    UploadCompleteResponseDTO,
+    UploadCompleteResponseDataDTO,
     UploadInitRequestDTO,
     UploadInitResponseDataDTO,
     UploadInitResponseDTO,
@@ -19,7 +22,12 @@ class UploadController:
     """Controller responsible for handling upload HTTP requests.
 
     Attributes:
-        service: Upload service used to process upload use cases.
+        service: Executes upload use cases delegated by the controller.
+        logger: Records controller execution events.
+
+    Args:
+        service: Upload service instance used by this controller.
+        logger: Logger instance used by this controller.
     """
 
     def __init__(
@@ -31,6 +39,7 @@ class UploadController:
 
         Args:
             service: Upload service used to process requests.
+            logger: Logger used to register controller execution events.
         """
         self.service = service or UploadService()
         self.logger = logger or LOGGER
@@ -72,6 +81,67 @@ class UploadController:
             )
             return JSONResponse(
                 status_code=status.HTTP_400_BAD_REQUEST,
+                content={
+                    "success": False,
+                    "message": str(exc),
+                    "data": None,
+                },
+            )
+
+    def complete_upload(
+        self,
+        request: UploadCompleteRequestDTO,
+    ) -> JSONResponse:
+        """Handle the upload completion request.
+
+        Args:
+            request: Validated upload completion request.
+
+        Returns:
+            Standardized JSON response containing final upload metadata.
+        """
+        try:
+            self.logger.log_info(
+                "[upload:complete:controller] Received upload completion request"
+            )
+
+            result = self.service.complete_upload(
+                dataset_id=str(request.dataset_id),
+                upload_id=request.upload_id,
+                parts=[part.model_dump() for part in request.parts],
+            )
+            response = UploadCompleteResponseDTO(
+                success=True,
+                message="Upload completed successfully.",
+                data=UploadCompleteResponseDataDTO(**result),
+            )
+
+            self.logger.log_info(
+                "[upload:complete:controller] Upload completion response created"
+            )
+
+            return JSONResponse(
+                status_code=status.HTTP_200_OK,
+                content=response.model_dump(mode="json"),
+            )
+        except ValueError as exc:
+            self.logger.log_warning(
+                f"[upload:complete:controller] Upload completion validation failed: {exc}"
+            )
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content={
+                    "success": False,
+                    "message": str(exc),
+                    "data": None,
+                },
+            )
+        except RuntimeError as exc:
+            self.logger.log_error(
+                f"[upload:complete:controller] Upload completion processing failed: {exc}"
+            )
+            return JSONResponse(
+                status_code=status.HTTP_502_BAD_GATEWAY,
                 content={
                     "success": False,
                     "message": str(exc),

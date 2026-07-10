@@ -95,8 +95,11 @@ class MinioBlobStorageAdapter(MultipartStorageAdapter):
             upload_id: Multipart upload identifier.
             parts: Uploaded parts information.
         """
-        raise NotImplementedError(
-            "Multipart completion is handled by the complete upload route."
+        self.client._complete_multipart_upload(
+            bucket_name=self.bucket_name,
+            object_name=object_key,
+            upload_id=upload_id,
+            parts=parts,
         )
 
     def abort_multipart_upload(

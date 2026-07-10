@@ -4,6 +4,8 @@ from app.routes.uploads.controllers.controller import UploadController
 from app.routes.uploads.dtos.dto import (
     UploadAbortRequestDTO,
     UploadAbortResponseDTO,
+    UploadCompleteRequestDTO,
+    UploadCompleteResponseDTO,
     UploadInitRequestDTO,
     UploadInitResponseDTO,
 )
@@ -27,6 +29,24 @@ def initialize_upload(request: UploadInitRequestDTO):
     """
     controller = UploadController()
     return controller.initialize_upload(request)
+
+
+@router.post(
+    "/complete",
+    status_code=status.HTTP_200_OK,
+    response_model=UploadCompleteResponseDTO,
+)
+def complete_upload(request: UploadCompleteRequestDTO):
+    """Complete a dataset multipart upload.
+
+    Args:
+        request: Validated upload completion request.
+
+    Returns:
+        Standardized upload completion response containing final metadata.
+    """
+    controller = UploadController()
+    return controller.complete_upload(request)
 
 
 @router.post(
