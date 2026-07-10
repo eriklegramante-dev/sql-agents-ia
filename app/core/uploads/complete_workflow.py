@@ -2,7 +2,9 @@ from datetime import datetime, timezone
 from typing import Any
 
 from app.adapters.storage.blob_storage_adapter import MultipartStorageAdapter
+from app.adapters.storage.exceptions import StorageOperationError
 from app.core.uploads.enums import DatasetStatus, UploadStatus
+from app.core.uploads.exceptions import UploadCompletionError
 from app.logs.setup_logger import LOGGER
 from app.repositories.upload_metadata_repository import UploadMetadataRepository
 
@@ -51,7 +53,7 @@ class UploadCompletionWorkflow:
 
         Raises:
             ValueError: If metadata, upload status, object key, or parts are invalid.
-            RuntimeError: If the storage completion operation fails.
+            UploadCompletionError: If object storage cannot complete the upload.
         """
         LOGGER.log_info("[upload:complete:workflow] Starting upload completion")
 
@@ -77,6 +79,7 @@ class UploadCompletionWorkflow:
             raise ValueError("Upload status cannot be completed.")
 
         object_key = metadata.get("object_key")
+
         if not object_key:
             raise ValueError("Upload object key not found.")
 
@@ -91,12 +94,14 @@ class UploadCompletionWorkflow:
                 upload_id=upload_id,
                 parts=sorted_parts,
             )
-        except Exception as exc:
+        except StorageOperationError as exc:
             LOGGER.log_error(
                 "[upload:complete:workflow] Storage completion failed: "
                 f"dataset_id={dataset_id}, upload_id={upload_id}, error={exc}"
             )
-            raise RuntimeError("Upload storage completion failed.") from exc
+            raise UploadCompletionError(
+                "Upload completion failed in object storage."
+            ) from exc
 
         self.repository.store_completed_parts(
             dataset_id=dataset_id,
@@ -142,7 +147,7 @@ class UploadCompletionWorkflow:
         if not parts:
             raise ValueError("Upload parts must not be empty.")
 
-        part_numbers = []
+        part_numbers: list[int] = []
 
         for part in parts:
             part_number = part.get("part_number")
@@ -159,7 +164,12 @@ class UploadCompletionWorkflow:
         if len(part_numbers) != len(set(part_numbers)):
             raise ValueError("Duplicated part numbers are not allowed.")
 
-        if expected_chunks_count is not None and len(parts) != expected_chunks_count:
-            raise ValueError("Uploaded parts count does not match expected chunks count.")
+        if (
+            expected_chunks_count is not None
+            and len(parts) != expected_chunks_count
+        ):
+            raise ValueError(
+                "Uploaded parts count does not match expected chunks count."
+            )
 
         return sorted(parts, key=lambda part: part["part_number"])

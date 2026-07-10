@@ -1,78 +1,43 @@
-from typing import Any, Optional
+from typing import Any
 
-from app.adapters.storage.minio_blob_storage_adapter import MinioBlobStorageAdapter
-from app.connections.minio import get_minio_client
 from app.core.uploads.abort_workflow import UploadAbortWorkflow
 from app.core.uploads.complete_workflow import UploadCompletionWorkflow
 from app.core.uploads.workflow import UploadInitializationWorkflow
 from app.logs.setup_logger import LOGGER
-from app.repositories.in_memory_upload_metadata_repository import (
-    InMemoryUploadMetadataRepository,
-)
-from app.settings.setting import get_settings
 
 
 class UploadService:
     """Service responsible for exposing upload use cases.
 
     Attributes:
-        workflow: Main workflow alias used for upload initialization.
-        init_workflow: Workflow responsible for upload initialization.
+        workflow: Workflow responsible for upload initialization.
+        init_workflow: Alias for the upload initialization workflow.
         complete_workflow: Workflow responsible for upload completion.
         abort_workflow: Workflow responsible for upload abort.
 
     Args:
-        init_workflow: Optional initialization workflow instance used by this service.
-        complete_workflow: Optional completion workflow instance used by this service.
-        abort_workflow: Optional abort workflow instance used by this service.
-        workflow: Optional legacy initialization workflow alias used by this service.
+        init_workflow: Upload initialization workflow used by this service.
+        complete_workflow: Upload completion workflow used by this service.
+        abort_workflow: Upload abort workflow used by this service.
     """
 
     def __init__(
         self,
-        init_workflow: Optional[UploadInitializationWorkflow] = None,
-        complete_workflow: Optional[UploadCompletionWorkflow] = None,
-        abort_workflow: Optional[UploadAbortWorkflow] = None,
-        workflow: Optional[UploadInitializationWorkflow] = None,
+        init_workflow: UploadInitializationWorkflow,
+        complete_workflow: UploadCompletionWorkflow,
+        abort_workflow: UploadAbortWorkflow,
     ) -> None:
         """Initialize the upload service.
 
         Args:
-            init_workflow: Optional workflow used to initialize uploads.
-            complete_workflow: Optional workflow used to complete uploads.
-            abort_workflow: Optional workflow used to abort uploads.
-            workflow: Optional legacy alias for the upload initialization workflow.
+            init_workflow: Workflow used to initialize uploads.
+            complete_workflow: Workflow used to complete uploads.
+            abort_workflow: Workflow used to abort uploads.
         """
-        selected_init_workflow = init_workflow or workflow
-
-        if (
-            selected_init_workflow is not None
-            or complete_workflow is not None
-            or abort_workflow is not None
-        ):
-            self.workflow = selected_init_workflow
-            self.init_workflow = self.workflow
-            self.complete_workflow = complete_workflow
-            self.abort_workflow = abort_workflow
-            return
-
-        repository = InMemoryUploadMetadataRepository()
-        storage_adapter = self._build_storage_adapter()
-
-        self.workflow = UploadInitializationWorkflow(
-            repository=repository,
-            storage_adapter=storage_adapter,
-            config=get_settings().upload,
-        )
-        self.init_workflow = self.workflow
-        self.complete_workflow = UploadCompletionWorkflow(
-            repository=repository,
-            storage_adapter=storage_adapter,
-        )
-        self.abort_workflow = UploadAbortWorkflow(
-            repository=repository,
-            storage_adapter=storage_adapter,
-        )
+        self.workflow = init_workflow
+        self.init_workflow = init_workflow
+        self.complete_workflow = complete_workflow
+        self.abort_workflow = abort_workflow
 
     def initialize_upload(self, request: Any) -> dict[str, Any]:
         """Initialize a dataset upload.
@@ -113,7 +78,11 @@ class UploadService:
         LOGGER.log_info("[upload:complete:service] Upload completion finished")
         return result
 
-    def abort_upload(self, dataset_id: str, upload_id: str) -> dict[str, Any]:
+    def abort_upload(
+        self,
+        dataset_id: str,
+        upload_id: str,
+    ) -> dict[str, Any]:
         """Abort an unfinished dataset upload.
 
         Args:
@@ -130,18 +99,3 @@ class UploadService:
         )
         LOGGER.log_info("[upload:abort:service] Upload abort finished")
         return result
-
-    def _build_storage_adapter(self) -> MinioBlobStorageAdapter:
-        """Build the MinIO storage adapter.
-
-        Returns:
-            Configured MinIO blob storage adapter.
-        """
-        settings = get_settings()
-        minio_client = get_minio_client(settings=settings)
-
-        return MinioBlobStorageAdapter(
-            client=minio_client,
-            bucket_name=settings.minio.bucket_name,
-            signed_url_expires_seconds=settings.upload.signed_url_expires_seconds,
-        )

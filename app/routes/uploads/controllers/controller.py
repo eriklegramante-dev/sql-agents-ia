@@ -16,6 +16,7 @@ from app.routes.uploads.dtos.dto import (
     UploadInitResponseDTO,
 )
 from app.routes.uploads.services.service import UploadService
+from app.core.uploads.exceptions import UploadCompletionError
 
 
 class UploadController:
@@ -126,29 +127,34 @@ class UploadController:
             )
         except ValueError as exc:
             self.logger.log_warning(
-                f"[upload:complete:controller] Upload completion validation failed: {exc}"
+                "[upload:complete:controller] "
+                f"Upload completion validation failed: {exc}"
             )
             return JSONResponse(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 content={
                     "success": False,
-                    "message": str(exc),
+                    "message": "The upload completion request is invalid.",
                     "data": None,
                 },
             )
-        except RuntimeError as exc:
+        except UploadCompletionError as exc:
             self.logger.log_error(
-                f"[upload:complete:controller] Upload completion processing failed: {exc}"
+                "[upload:complete:controller] "
+                f"Upload completion processing failed: {exc}"
             )
             return JSONResponse(
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 content={
                     "success": False,
-                    "message": str(exc),
+                    "message": (
+                        "The upload could not be completed at this time."
+                    ),
                     "data": None,
                 },
             )
-
+        
+        
     def abort_upload(
         self,
         request: UploadAbortRequestDTO,

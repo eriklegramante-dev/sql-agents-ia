@@ -1,6 +1,7 @@
 from fastapi import status
 from fastapi.responses import JSONResponse
 
+from app.core.uploads.exceptions import UploadCompletionError
 from app.routes.uploads.controllers.controller import UploadController
 from app.routes.uploads.dtos.dto import (
     UploadCompleteRequestDTO,
@@ -167,12 +168,15 @@ def test_complete_upload_returns_bad_request_when_service_raises_value_error() -
     assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
-def test_complete_upload_returns_bad_gateway_when_service_raises_runtime_error() -> None:
+def test_complete_upload_returns_bad_gateway_when_service_raises_completion_error() -> None:
     service = FakeUploadService()
-    service.complete_error = RuntimeError("Storage failure.")
+    service.complete_error = UploadCompletionError(
+        "Upload completion failed in object storage."
+    )
     controller = UploadController(service=service)
     request = make_complete_request()
 
     response = controller.complete_upload(request)
 
+    assert isinstance(response, JSONResponse)
     assert response.status_code == status.HTTP_502_BAD_GATEWAY
