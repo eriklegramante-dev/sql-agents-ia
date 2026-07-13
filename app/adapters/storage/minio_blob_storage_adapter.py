@@ -5,13 +5,23 @@ from minio import Minio
 from minio.error import S3Error
 
 from app.adapters.storage.blob_storage_adapter import MultipartStorageAdapter
+from app.adapters.storage.minio_multipart_client_adapter import (
+    MultipartClientAdapter,
+)
 
 
 class MinioBlobStorageAdapter(MultipartStorageAdapter):
     """MinIO adapter responsible for multipart upload operations.
 
     Attributes:
-        client: MinIO client used to communicate with object storage.
+        client: MinIO client used for public object storage operations.
+        multipart_client: Adapter used for low-level multipart operations.
+        bucket_name: Bucket used to store raw uploaded files.
+        signed_url_expires_seconds: Expiration time for signed URLs.
+
+    Args:
+        client: MinIO SDK client instance used by this adapter.
+        multipart_client: Multipart client adapter used by this adapter.
         bucket_name: Bucket used to store raw uploaded files.
         signed_url_expires_seconds: Expiration time for signed URLs.
     """
@@ -19,6 +29,7 @@ class MinioBlobStorageAdapter(MultipartStorageAdapter):
     def __init__(
         self,
         client: Minio,
+        multipart_client: MultipartClientAdapter,
         bucket_name: str,
         signed_url_expires_seconds: int,
     ) -> None:
@@ -26,10 +37,12 @@ class MinioBlobStorageAdapter(MultipartStorageAdapter):
 
         Args:
             client: MinIO client instance.
+            multipart_client: Adapter used for multipart operations.
             bucket_name: Bucket used to store raw uploaded files.
             signed_url_expires_seconds: Expiration time for signed URLs.
         """
         self.client = client
+        self.multipart_client = multipart_client
         self.bucket_name = bucket_name
         self.signed_url_expires_seconds = signed_url_expires_seconds
         self._ensure_bucket_exists()
@@ -48,13 +61,12 @@ class MinioBlobStorageAdapter(MultipartStorageAdapter):
         Returns:
             Multipart upload identifier.
         """
-        response = self.client._create_multipart_upload(
+        return self.multipart_client.initialize(
             bucket_name=self.bucket_name,
-            object_name=object_key,
-            headers={"Content-Type": content_type},
+            object_key=object_key,
+            content_type=content_type,
         )
-        return response
-    
+
     def generate_signed_part_url(
         self,
         object_key: str,
@@ -95,8 +107,11 @@ class MinioBlobStorageAdapter(MultipartStorageAdapter):
             upload_id: Multipart upload identifier.
             parts: Uploaded parts information.
         """
-        raise NotImplementedError(
-            "Multipart completion is handled by the complete upload route."
+        self.multipart_client.complete(
+            bucket_name=self.bucket_name,
+            object_key=object_key,
+            upload_id=upload_id,
+            parts=parts,
         )
 
     def abort_multipart_upload(
@@ -110,9 +125,9 @@ class MinioBlobStorageAdapter(MultipartStorageAdapter):
             object_key: Object storage key.
             upload_id: Multipart upload identifier.
         """
-        self.client._abort_multipart_upload(
+        self.multipart_client.abort(
             bucket_name=self.bucket_name,
-            object_name=object_key,
+            object_key=object_key,
             upload_id=upload_id,
         )
 

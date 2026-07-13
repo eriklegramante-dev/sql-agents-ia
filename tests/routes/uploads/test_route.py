@@ -1,5 +1,8 @@
+from fastapi import status
 from fastapi.testclient import TestClient
+from fastapi.responses import JSONResponse
 
+from app.routes.uploads.dependencies.dependence import get_upload_controller
 from app.main import app
 
 client = TestClient(app)
@@ -125,6 +128,106 @@ def test_abort_upload_route_missing_upload_id() -> None:
         "/api/v1/uploads/abort",
         json={
             "dataset_id": "dataset-1",
+        },
+    )
+
+    assert response.status_code == 422
+
+def test_complete_upload_route_success() -> None:
+    class FakeUploadController:
+        def complete_upload(self, request):
+            return JSONResponse(
+                status_code=status.HTTP_200_OK,
+                content={
+                    "success": True,
+                    "message": "Upload completed successfully.",
+                    "data": {
+                        "dataset_id": str(request.dataset_id),
+                        "upload_id": request.upload_id,
+                        "status": "COMPLETED",
+                        "object_key": "datasets/dataset-1/raw/file.csv",
+                        "completed_parts_count": len(request.parts),
+                    },
+                },
+            )
+
+    app.dependency_overrides[get_upload_controller] = (
+        lambda: FakeUploadController()
+    )
+
+    try:
+        response = client.post(
+            "/api/v1/uploads/complete",
+            json={
+                "dataset_id": "dataset-1",
+                "upload_id": "upload-1",
+                "parts": [
+                    {
+                        "part_number": 1,
+                        "etag": "etag-1",
+                    },
+                ],
+            },
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {
+        "success": True,
+        "message": "Upload completed successfully.",
+        "data": {
+            "dataset_id": "dataset-1",
+            "upload_id": "upload-1",
+            "status": "COMPLETED",
+            "object_key": "datasets/dataset-1/raw/file.csv",
+            "completed_parts_count": 1,
+        },
+    }
+
+def test_complete_upload_route_rejects_empty_parts() -> None:
+    response = client.post(
+        "/api/v1/uploads/complete",
+        json={
+            "dataset_id": "dataset-1",
+            "upload_id": "upload-1",
+            "parts": [],
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_complete_upload_route_rejects_invalid_part_number() -> None:
+    response = client.post(
+        "/api/v1/uploads/complete",
+        json={
+            "dataset_id": "dataset-1",
+            "upload_id": "upload-1",
+            "parts": [
+                {
+                    "part_number": 0,
+                    "etag": "etag-1",
+                },
+            ],
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_complete_upload_route_rejects_blank_etag() -> None:
+    response = client.post(
+        "/api/v1/uploads/complete",
+        json={
+            "dataset_id": "dataset-1",
+            "upload_id": "upload-1",
+            "parts": [
+                {
+                    "part_number": 1,
+                    "etag": "   ",
+                },
+            ],
         },
     )
 

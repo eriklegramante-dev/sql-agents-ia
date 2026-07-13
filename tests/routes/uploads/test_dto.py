@@ -16,6 +16,8 @@ def test_upload_init_request_rejects_blank_dataset_name() -> None:
 
 from app.routes.uploads.dtos.dto import (
     UploadAbortRequestDTO,
+    UploadCompleteRequestDTO,
+    UploadCompleteResponseDTO,
     UploadAbortResponseDTO,
     UploadAbortResponseDataDTO,
 )
@@ -54,3 +56,38 @@ def test_upload_abort_response_builds_successfully() -> None:
     assert response.success is True
     assert response.data.upload_status == "ABORTED"
     assert response.data.dataset_status == "ABORTED"
+
+def test_upload_complete_request_dto_accepts_valid_payload() -> None:
+    request = UploadCompleteRequestDTO(
+        dataset_id="dataset-1",
+        upload_id="upload-1",
+        parts=[
+            {
+                "part_number": 1,
+                "etag": "etag-1",
+            },
+        ],
+    )
+
+    assert request.dataset_id == "dataset-1"
+    assert request.upload_id == "upload-1"
+    assert request.parts[0].part_number == 1
+    assert request.parts[0].etag == "etag-1"
+
+
+def test_upload_complete_response_dto_accepts_valid_payload() -> None:
+    response = UploadCompleteResponseDTO(
+        success=True,
+        message="Upload completed successfully.",
+        data={
+            "dataset_id": "dataset-1",
+            "upload_id": "upload-1",
+            "status": "COMPLETED",
+            "object_key": "datasets/dataset-1/raw/file.csv",
+            "completed_parts_count": 1,
+        },
+    )
+
+    assert response.success is True
+    assert response.data.status == "COMPLETED"
+    assert response.data.completed_parts_count == 1

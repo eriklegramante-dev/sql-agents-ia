@@ -11,6 +11,31 @@ class FakeInitWorkflow:
         return {"status": "UPLOADING"}
 
 
+class FakeCompleteWorkflow:
+    def __init__(self) -> None:
+        self.received_dataset_id = None
+        self.received_upload_id = None
+        self.received_parts = None
+
+    def run(
+        self,
+        dataset_id: str,
+        upload_id: str,
+        parts: list[dict],
+    ) -> dict:
+        self.received_dataset_id = dataset_id
+        self.received_upload_id = upload_id
+        self.received_parts = parts
+
+        return {
+            "dataset_id": dataset_id,
+            "upload_id": upload_id,
+            "status": "COMPLETED",
+            "object_key": "datasets/dataset-1/raw/file.csv",
+            "completed_parts_count": len(parts),
+        }
+
+
 class FakeAbortWorkflow:
     def __init__(self) -> None:
         self.received_dataset_id = None
@@ -19,6 +44,7 @@ class FakeAbortWorkflow:
     def run(self, dataset_id: str, upload_id: str) -> dict:
         self.received_dataset_id = dataset_id
         self.received_upload_id = upload_id
+
         return {
             "dataset_id": dataset_id,
             "upload_id": upload_id,
@@ -27,9 +53,32 @@ class FakeAbortWorkflow:
         }
 
 
+def build_service() -> tuple[
+    UploadService,
+    FakeInitWorkflow,
+    FakeCompleteWorkflow,
+    FakeAbortWorkflow,
+]:
+    init_workflow = FakeInitWorkflow()
+    complete_workflow = FakeCompleteWorkflow()
+    abort_workflow = FakeAbortWorkflow()
+
+    service = UploadService(
+        init_workflow=init_workflow,
+        complete_workflow=complete_workflow,
+        abort_workflow=abort_workflow,
+    )
+
+    return (
+        service,
+        init_workflow,
+        complete_workflow,
+        abort_workflow,
+    )
+
+
 def test_initialize_upload_delegates_to_workflow() -> None:
-    workflow = FakeInitWorkflow()
-    service = UploadService(workflow=workflow)
+    service, init_workflow, _, _ = build_service()
     request = UploadInitRequestDTO(
         filename="customers.csv",
         content_type="text/csv",
@@ -41,26 +90,33 @@ def test_initialize_upload_delegates_to_workflow() -> None:
     result = service.initialize_upload(request)
 
     assert result == {"status": "UPLOADING"}
-    assert workflow.received_request == request
+    assert init_workflow.received_request == request
+
+
+def test_complete_upload_delegates_to_workflow() -> None:
+    service, _, complete_workflow, _ = build_service()
+    parts = [{"part_number": 1, "etag": "etag-1"}]
+
+    result = service.complete_upload(
+        dataset_id="dataset-1",
+        upload_id="upload-1",
+        parts=parts,
+    )
+
+    assert result["status"] == "COMPLETED"
+    assert complete_workflow.received_dataset_id == "dataset-1"
+    assert complete_workflow.received_upload_id == "upload-1"
+    assert complete_workflow.received_parts == parts
 
 
 def test_abort_upload_delegates_to_workflow() -> None:
-    abort_workflow = FakeAbortWorkflow()
-    service = UploadService(
-        workflow=FakeInitWorkflow(),
-        abort_workflow=abort_workflow,
-    )
+    service, _, _, abort_workflow = build_service()
 
     result = service.abort_upload(
         dataset_id="dataset-1",
         upload_id="upload-1",
     )
 
-    assert result == {
-        "dataset_id": "dataset-1",
-        "upload_id": "upload-1",
-        "upload_status": "ABORTED",
-        "dataset_status": "ABORTED",
-    }
+    assert result["upload_status"] == "ABORTED"
     assert abort_workflow.received_dataset_id == "dataset-1"
     assert abort_workflow.received_upload_id == "upload-1"

@@ -1,13 +1,19 @@
 from fastapi import status
 from fastapi.responses import JSONResponse
 
+from app.core.uploads.exceptions import UploadCompletionError
 from app.routes.uploads.controllers.controller import UploadController
-from app.routes.uploads.dtos.dto import UploadInitRequestDTO
+from app.routes.uploads.dtos.dto import (
+    UploadCompleteRequestDTO,
+    UploadInitRequestDTO,
+)
 
 
 class FakeUploadService:
     def __init__(self, should_fail: bool = False) -> None:
         self.should_fail = should_fail
+        self.complete_error = None
+        self.completed_upload = None
 
     def initialize_upload(self, request: UploadInitRequestDTO) -> dict:
         if self.should_fail:
@@ -28,6 +34,24 @@ class FakeUploadService:
             ],
         }
 
+    def complete_upload(self, dataset_id: str, upload_id: str, parts: list[dict]) -> dict:
+        if self.complete_error:
+            raise self.complete_error
+
+        self.completed_upload = {
+            "dataset_id": dataset_id,
+            "upload_id": upload_id,
+            "parts": parts,
+        }
+
+        return {
+            "dataset_id": dataset_id,
+            "upload_id": upload_id,
+            "status": "COMPLETED",
+            "object_key": "datasets/dataset-1/raw/file.csv",
+            "completed_parts_count": len(parts),
+        }
+
 
 def make_request() -> UploadInitRequestDTO:
     return UploadInitRequestDTO(
@@ -36,6 +60,19 @@ def make_request() -> UploadInitRequestDTO:
         file_size_bytes=1000,
         dataset_name="Customers",
         description=None,
+    )
+
+
+def make_complete_request() -> UploadCompleteRequestDTO:
+    return UploadCompleteRequestDTO(
+        dataset_id="dataset-1",
+        upload_id="upload-1",
+        parts=[
+            {
+                "part_number": 1,
+                "etag": "etag-1",
+            },
+        ],
     )
 
 
@@ -57,7 +94,7 @@ def test_initialize_upload_returns_bad_request_on_value_error() -> None:
 
     assert isinstance(response, JSONResponse)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    
+
 
 class FakeAbortService:
     def abort_upload(self, dataset_id: str, upload_id: str) -> dict:
@@ -92,7 +129,7 @@ def test_abort_upload_controller_success() -> None:
     response = controller.abort_upload(request)
 
     assert isinstance(response, JSONResponse)
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
 
 
 def test_abort_upload_controller_failure() -> None:
@@ -102,4 +139,44 @@ def test_abort_upload_controller_failure() -> None:
     response = controller.abort_upload(request)
 
     assert isinstance(response, JSONResponse)
-    assert response.status_code == 400
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+
+def test_complete_upload_returns_success_response() -> None:
+    service = FakeUploadService()
+    controller = UploadController(service=service)
+    request = make_complete_request()
+
+    response = controller.complete_upload(request)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert service.completed_upload == {
+        "dataset_id": "dataset-1",
+        "upload_id": "upload-1",
+        "parts": [{"part_number": 1, "etag": "etag-1"}],
+    }
+
+
+def test_complete_upload_returns_bad_request_when_service_raises_value_error() -> None:
+    service = FakeUploadService()
+    service.complete_error = ValueError("Invalid completion request.")
+    controller = UploadController(service=service)
+    request = make_complete_request()
+
+    response = controller.complete_upload(request)
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+
+def test_complete_upload_returns_bad_gateway_when_service_raises_completion_error() -> None:
+    service = FakeUploadService()
+    service.complete_error = UploadCompletionError(
+        "Upload completion failed in object storage."
+    )
+    controller = UploadController(service=service)
+    request = make_complete_request()
+
+    response = controller.complete_upload(request)
+
+    assert isinstance(response, JSONResponse)
+    assert response.status_code == status.HTTP_502_BAD_GATEWAY
