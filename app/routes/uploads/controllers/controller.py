@@ -3,6 +3,7 @@ from typing import Optional
 from fastapi import status
 from fastapi.responses import JSONResponse
 
+from app.core.uploads.exceptions import UploadCompletionError
 from app.logs.setup_logger import LOGGER, LoggerManager
 from app.routes.uploads.dtos.dto import (
     UploadAbortRequestDTO,
@@ -16,7 +17,6 @@ from app.routes.uploads.dtos.dto import (
     UploadInitResponseDTO,
 )
 from app.routes.uploads.services.service import UploadService
-from app.core.uploads.exceptions import UploadCompletionError
 
 
 class UploadController:
@@ -27,22 +27,22 @@ class UploadController:
         logger: Records controller execution events.
 
     Args:
-        service: Upload service instance used by this controller.
+        service: Fully configured upload service used by this controller.
         logger: Logger instance used by this controller.
     """
 
     def __init__(
         self,
-        service: Optional[UploadService] = None,
+        service: UploadService,
         logger: Optional[LoggerManager] = None,
     ) -> None:
         """Initialize the upload controller.
 
         Args:
-            service: Upload service used to process requests.
+            service: Fully configured upload service used to process requests.
             logger: Logger used to register controller execution events.
         """
-        self.service = service or UploadService()
+        self.service = service
         self.logger = logger or LOGGER
 
     def initialize_upload(
@@ -147,14 +147,11 @@ class UploadController:
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 content={
                     "success": False,
-                    "message": (
-                        "The upload could not be completed at this time."
-                    ),
+                    "message": "The upload could not be completed at this time.",
                     "data": None,
                 },
             )
-        
-        
+
     def abort_upload(
         self,
         request: UploadAbortRequestDTO,
@@ -168,7 +165,9 @@ class UploadController:
             Standardized JSON response containing final upload statuses.
         """
         try:
-            self.logger.log_info("[upload:abort:controller] Received upload abort request")
+            self.logger.log_info(
+                "[upload:abort:controller] Received upload abort request"
+            )
 
             result = self.service.abort_upload(
                 dataset_id=str(request.dataset_id),
@@ -180,7 +179,9 @@ class UploadController:
                 data=UploadAbortResponseDataDTO(**result),
             )
 
-            self.logger.log_info("[upload:abort:controller] Upload abort response created")
+            self.logger.log_info(
+                "[upload:abort:controller] Upload abort response created"
+            )
 
             return JSONResponse(
                 status_code=status.HTTP_200_OK,
