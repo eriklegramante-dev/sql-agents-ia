@@ -100,7 +100,7 @@ class DatasetPreviewControllerTest(unittest.IsolatedAsyncioTestCase):
                     "Internal server error during dataset preview retrieval."
                 ),
                 "data": None,
-                "errors": "An unexpected internal error occurred.",
+                "errors": ["An unexpected internal error occurred."],
             },
         )
 

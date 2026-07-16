@@ -122,7 +122,7 @@ class DatasetPreviewRouteTest(unittest.TestCase):
 
         self.assertEqual(status_code, 200)
         self.assertEqual(response_json, expected_response)
-        self.assertIsNone(controller.received_request.limit)
+        self.assertEqual(controller.received_request.limit, 20)
 
     def test_get_dataset_preview_rejects_invalid_uuid(self):
         self.override_controller(FakePreviewController())
@@ -132,18 +132,29 @@ class DatasetPreviewRouteTest(unittest.TestCase):
         self.assertEqual(status_code, 422)
         self.assertEqual(response_json["detail"][0]["loc"], ["path", "dataset_id"])
 
-    def test_get_dataset_preview_passes_limit_to_controller(self):
-        expected_response = make_preview_response(limit=0)
-        controller = FakePreviewController(response=expected_response)
+    def test_get_dataset_preview_rejects_limit_lower_than_one(self):
+        controller = FakePreviewController()
         self.override_controller(controller)
 
         status_code, response_json = get(
             f"/api/v1/datasets/{DATASET_ID}/preview?limit=0"
         )
 
-        self.assertEqual(status_code, 200)
-        self.assertEqual(response_json, expected_response)
-        self.assertEqual(controller.received_request.limit, 0)
+        self.assertEqual(status_code, 422)
+        self.assertEqual(response_json["detail"][0]["loc"], ["query", "limit"])
+        self.assertIsNone(controller.received_request)
+
+    def test_get_dataset_preview_rejects_limit_greater_than_one_hundred(self):
+        controller = FakePreviewController()
+        self.override_controller(controller)
+
+        status_code, response_json = get(
+            f"/api/v1/datasets/{DATASET_ID}/preview?limit=101"
+        )
+
+        self.assertEqual(status_code, 422)
+        self.assertEqual(response_json["detail"][0]["loc"], ["query", "limit"])
+        self.assertIsNone(controller.received_request)
 
     def test_get_dataset_preview_returns_controller_http_exception_response(self):
         controller = FakePreviewController(

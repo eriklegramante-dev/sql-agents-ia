@@ -41,11 +41,11 @@ class DatasetPreviewWorkflow:
         dataset_repository: DatasetRepository,
         storage_adapter: LocalStorageAdapter,
         preview_reader: PreviewReader,
-        logger: LoggerManager | None = None
-    ) -> None: 
+        logger: LoggerManager | None = None,
+    ) -> None:
         self.dataset_repository = dataset_repository
         self.storage_adapter = storage_adapter
-        self.preview_reader = preview_reader 
+        self.preview_reader = preview_reader
         self.logger = logger or LOGGER
 
     async def execute(
@@ -115,11 +115,6 @@ class DatasetPreviewWorkflow:
         if self.storage_adapter is None:
             raise RuntimeError(
                 "Storage adapter dependency was not configured."
-            )
-
-        if self.preview_reader is None:
-            raise RuntimeError(
-                "Preview reader dependency was not configured."
             )
 
     def _normalize_limit(

@@ -90,6 +90,6 @@ class DatasetPreviewController:
                     ),
                     "data": None,
                     "errors": (
-                        "An unexpected internal error occurred."),
+                        ["An unexpected internal error occurred."]),
                 },
             ) from error
