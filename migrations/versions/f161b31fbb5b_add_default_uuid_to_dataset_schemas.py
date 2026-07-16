@@ -3,7 +3,7 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "COLOQUE_A_REVISION_GERADA"
+revision: str = "f161b31fbb5b"
 down_revision: str | None = "19e972489b5b"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None

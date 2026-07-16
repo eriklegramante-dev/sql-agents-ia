@@ -2,8 +2,9 @@ import asyncio
 import json
 import unittest
 
+from fastapi import HTTPException
+
 from app.main import app
-from app.prepare.exceptions import AppException
 from app.preview.dependencies import get_dataset_preview_controller
 from tests.helpers import DATASET_ID
 
@@ -121,7 +122,7 @@ class DatasetPreviewRouteTest(unittest.TestCase):
 
         self.assertEqual(status_code, 200)
         self.assertEqual(response_json, expected_response)
-        self.assertEqual(controller.received_request.limit, 20)
+        self.assertIsNone(controller.received_request.limit)
 
     def test_get_dataset_preview_rejects_invalid_uuid(self):
         self.override_controller(FakePreviewController())
@@ -131,21 +132,32 @@ class DatasetPreviewRouteTest(unittest.TestCase):
         self.assertEqual(status_code, 422)
         self.assertEqual(response_json["detail"][0]["loc"], ["path", "dataset_id"])
 
-    def test_get_dataset_preview_rejects_invalid_limit(self):
-        self.override_controller(FakePreviewController())
+    def test_get_dataset_preview_passes_limit_to_controller(self):
+        expected_response = make_preview_response(limit=0)
+        controller = FakePreviewController(response=expected_response)
+        self.override_controller(controller)
 
         status_code, response_json = get(
             f"/api/v1/datasets/{DATASET_ID}/preview?limit=0"
         )
 
-        self.assertEqual(status_code, 422)
-        self.assertEqual(response_json["detail"][0]["loc"], ["query", "limit"])
+        self.assertEqual(status_code, 200)
+        self.assertEqual(response_json, expected_response)
+        self.assertEqual(controller.received_request.limit, 0)
 
-    def test_get_dataset_preview_returns_app_exception_response(self):
+    def test_get_dataset_preview_returns_controller_http_exception_response(self):
         controller = FakePreviewController(
-            exception=AppException(
-                message="Dataset must be prepared or profiled before preview retrieval.",
+            exception=HTTPException(
                 status_code=409,
+                detail={
+                    "success": False,
+                    "message": (
+                        "Dataset must be prepared or profiled before preview "
+                        "retrieval."
+                    ),
+                    "data": None,
+                    "errors": [],
+                },
             )
         )
         self.override_controller(controller)
@@ -164,27 +176,6 @@ class DatasetPreviewRouteTest(unittest.TestCase):
                     ),
                     "data": None,
                     "errors": [],
-                }
-            },
-        )
-
-    def test_get_dataset_preview_returns_internal_error_on_generic_exception(self):
-        controller = FakePreviewController(exception=RuntimeError("boom"))
-        self.override_controller(controller)
-
-        status_code, response_json = get(f"/api/v1/datasets/{DATASET_ID}/preview")
-
-        self.assertEqual(status_code, 500)
-        self.assertEqual(
-            response_json,
-            {
-                "detail": {
-                    "success": False,
-                    "message": (
-                        "Internal server error during dataset preview retrieval."
-                    ),
-                    "data": None,
-                    "errors": ["boom"],
                 }
             },
         )

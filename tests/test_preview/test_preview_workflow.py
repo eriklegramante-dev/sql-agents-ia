@@ -122,6 +122,9 @@ class DatasetPreviewWorkflowTest(unittest.IsolatedAsyncioTestCase):
         workflow = DatasetPreviewWorkflow(
             dataset_repository=FakeDatasetRepository(dataset=None),
             storage_adapter=FakeStorage(),
+            preview_reader=FakePreviewReader(
+                PreviewResult(columns=[], rows=[], rows_count=0)
+            ),
         )
         request = DatasetPreviewRequestDTO(
             dataset_id=DATASET_ID,
@@ -139,6 +142,9 @@ class DatasetPreviewWorkflowTest(unittest.IsolatedAsyncioTestCase):
                 make_dataset(status=DatasetStatus.COMPLETED)
             ),
             storage_adapter=FakeStorage(),
+            preview_reader=FakePreviewReader(
+                PreviewResult(columns=[], rows=[], rows_count=0)
+            ),
         )
         request = DatasetPreviewRequestDTO(
             dataset_id=DATASET_ID,
@@ -156,6 +162,9 @@ class DatasetPreviewWorkflowTest(unittest.IsolatedAsyncioTestCase):
                 make_dataset(status=DatasetStatus.PREPARED)
             ),
             storage_adapter=FakeStorage(),
+            preview_reader=FakePreviewReader(
+                PreviewResult(columns=[], rows=[], rows_count=0)
+            ),
         )
         request = DatasetPreviewRequestDTO(
             dataset_id=DATASET_ID,
@@ -171,6 +180,9 @@ class DatasetPreviewWorkflowTest(unittest.IsolatedAsyncioTestCase):
         workflow = DatasetPreviewWorkflow(
             dataset_repository=None,
             storage_adapter=FakeStorage(),
+            preview_reader=FakePreviewReader(
+                PreviewResult(columns=[], rows=[], rows_count=0)
+            ),
         )
         request = DatasetPreviewRequestDTO(
             dataset_id=DATASET_ID,
@@ -186,6 +198,9 @@ class DatasetPreviewWorkflowTest(unittest.IsolatedAsyncioTestCase):
                 make_dataset(status=DatasetStatus.PREPARED)
             ),
             storage_adapter=None,
+            preview_reader=FakePreviewReader(
+                PreviewResult(columns=[], rows=[], rows_count=0)
+            ),
         )
         request = DatasetPreviewRequestDTO(
             dataset_id=DATASET_ID,

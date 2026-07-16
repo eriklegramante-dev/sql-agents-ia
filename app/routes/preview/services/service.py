@@ -24,10 +24,10 @@ class DatasetPreviewService:
 
     def __init__(
         self,
-        workflow: Optional[DatasetPreviewWorkflow] = None,
-        logger: Optional[LoggerManager] = None,
+        workflow: DatasetPreviewWorkflow,
+        logger: LoggerManager | None = None,
     ) -> None:
-        self.workflow = workflow or DatasetPreviewWorkflow()
+        self.workflow = workflow 
         self.logger = logger or LOGGER
 
     async def execute(

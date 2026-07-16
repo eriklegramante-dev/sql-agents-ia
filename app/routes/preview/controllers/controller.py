@@ -39,9 +39,9 @@ class DatasetPreviewController:
         self.logger = logger or LOGGER
 
     async def execute(
-    self,
-    request: DatasetPreviewRequestDTO,
-) -> DatasetPreviewResponseDTO:
+        self,
+        request: DatasetPreviewRequestDTO,
+    ) -> DatasetPreviewResponseDTO:
         try:
             self.logger.log_info(
                 f"Starting dataset preview controller for dataset "
@@ -89,6 +89,7 @@ class DatasetPreviewController:
                         "Internal server error during dataset preview retrieval."
                     ),
                     "data": None,
-                    "errors": [str(error)],
+                    "errors": (
+                        "An unexpected internal error occurred."),
                 },
             ) from error

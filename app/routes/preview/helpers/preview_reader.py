@@ -4,19 +4,22 @@ from io import BytesIO
 from typing import Any
 
 import pandas as pd
-from pydantic import BaseModel
 
-
-class PreviewResult(BaseModel):
-    """Represents the result generated from reading a dataset preview."""
-
-    columns: list[str]
-    rows: list[dict[str, Any]]
-    rows_count: int
+from app.routes.preview.helpers.preview_result import PreviewResult
 
 
 class PreviewReader:
-    """Reads Parquet content and generates a serializable dataset preview."""
+    """
+    Helper responsible for generating dataset preview data from Parquet files.
+
+    This helper loads a prepared Parquet dataset, applies the requested row
+    limit, converts the preview into a JSON-serializable structure, and
+    normalizes values that are not directly supported by JSON serialization,
+    such as dates, datetimes, decimals, and NumPy scalar types.
+
+    The generated preview contains the dataset column names, the selected
+    preview rows, and the total number of rows available in the dataset.
+    """
 
     def read(
         self,
