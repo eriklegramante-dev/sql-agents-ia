@@ -3,9 +3,7 @@ import uuid
 
 from sqlalchemy import Column, DateTime, Enum, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import declarative_base
-
-Base = declarative_base()
+from app.database.base import Base
 
 
 class DatasetStatus(enum.Enum):
