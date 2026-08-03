@@ -1,39 +1,43 @@
 from collections.abc import Awaitable, Callable
-from typing import Any
 from uuid import UUID
 
-from app.chat.exceptions import QueryExecutionException
-from app.chat.models import ChatArtifact
+from app.chat.exceptions import ChartGenerationException
+from app.chat.models import ChatArtifact, ChartResult
 
-QueryExecutor = Callable[
+
+ChartExecutor = Callable[
     [UUID, str],
-    Awaitable[dict[str, Any]],
+    Awaitable[ChartResult],
 ]
 
 
-class QueryToolAdapter:
+class ChartToolAdapter:
     """
-    Adapts an analytical query executor to the chat workflow.
+    Adapts a chart-generation executor to the chat workflow.
 
-    This adapter isolates dataset-question processing from the concrete
-    component responsible for generating and executing analytical queries.
-    The injected executor may call an existing query workflow, SQL agent, or
-    another analytical service.
+    This adapter isolates chart-generation requests from the concrete
+    visualization component responsible for creating graphical
+    representations of analytical data. The injected executor may invoke an
+    internal chart workflow, a visualization service, or another chart
+    generation mechanism without exposing infrastructure details to the chat
+    workflow.
 
-    The adapter converts the raw execution result into a ChatArtifact,
-    providing a stable result structure for the chat workflow. Infrastructure
-    failures are translated into a chat-specific domain exception.
+    The adapter validates the generated chart result and converts it into
+    the artifact format consumed by the chat workflow. Empty chart results
+    are treated as predictable application failures and translated into
+    ChartGenerationException. Unexpected programming errors are allowed to
+    propagate without being hidden.
 
     Attributes:
         executor:
-            Asynchronous callable responsible for processing an analytical
-            question against the selected dataset and returning structured
-            query results.
+            Asynchronous callable responsible for generating structured chart
+            data from a dataset identifier and a user request.
     """
+
 
     def __init__(
         self,
-        executor: QueryExecutor,
+        executor: ChartExecutor,
     ) -> None:
         self._executor = executor
 
@@ -42,24 +46,40 @@ class QueryToolAdapter:
         dataset_id: UUID,
         message: str,
     ) -> ChatArtifact:
-        try:
-            result = await self._executor(
-                dataset_id,
-                message,
-            )
-        except QueryExecutionException:
-            raise
-        except Exception as error:
-            raise QueryExecutionException(
-                "The analytical query could not be executed."
-            ) from error
+        """
+        Generates a chart for the provided dataset and user request.
+
+        Delegates the request to the injected chart executor, validates the
+        generated result, and converts it into the artifact format consumed by
+        the chat workflow.
+
+        Args:
+            dataset_id:
+                Identifier of the dataset used to generate the chart.
+
+            message:
+                User message describing the requested chart.
+
+        Returns:
+            ChatArtifact:
+                Structured artifact containing the generated chart data.
+
+        Raises:
+            ChartGenerationException:
+                If the chart generation returns no result or cannot produce a
+                valid chart artifact.
+        """
+        result = await self._executor(
+            dataset_id,
+            message,
+        )
 
         if not result:
-            raise QueryExecutionException(
-                "The analytical query returned no result."
+            raise ChartGenerationException(
+                "The chart generation returned no result."
             )
 
         return ChatArtifact(
-            type="query_result",
+            type="chart",
             content=result,
         )

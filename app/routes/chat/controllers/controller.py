@@ -54,7 +54,7 @@ class ChatMessageController:
         logger: LoggerManager | None = None,
     ) -> None:
         self._service = service
-        self._logger = logger or LOGGER
+        self._logger = logger
 
     async def execute(
         self,
@@ -103,25 +103,5 @@ class ChatMessageController:
                     "message": error.message,
                     "data": None,
                     "errors": error.details,
-                },
-            ) from error
-
-        except Exception as error:
-            self._logger.logger.exception(
-                "Unexpected error during chat message processing."
-            )
-
-            raise HTTPException(
-                status_code=500,
-                detail={
-                    "success": False,
-                    "message": (
-                        "Internal server error during chat message "
-                        "processing."
-                    ),
-                    "data": None,
-                    "errors": [
-                        "An unexpected internal error occurred.",
-                    ],
                 },
             ) from error

@@ -86,7 +86,17 @@ class ChatMessageResponseDTOTest(unittest.TestCase):
                 "dataset_id": DATASET_ID,
                 "artifact": ChatArtifactDTO(
                     type="chart",
-                    content={"kind": "bar"},
+                    content={
+                        "chart_type": "bar",
+                        "title": "Sales",
+                        "labels": ["Jan"],
+                        "series": [
+                            {
+                                "name": "sales",
+                                "values": [100],
+                            }
+                        ],
+                    },
                 ),
             },
             errors=None,
@@ -94,7 +104,20 @@ class ChatMessageResponseDTOTest(unittest.TestCase):
 
         self.assertTrue(response.success)
         self.assertEqual(response.data.artifact.type, "chart")
-        self.assertEqual(response.data.artifact.content, {"kind": "bar"})
+        self.assertEqual(
+            response.data.artifact.content,
+            {
+                "chart_type": "bar",
+                "title": "Sales",
+                "labels": ["Jan"],
+                "series": [
+                    {
+                        "name": "sales",
+                        "values": [100],
+                    }
+                ],
+            },
+        )
 
 
 if __name__ == "__main__":

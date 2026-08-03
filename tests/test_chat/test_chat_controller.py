@@ -25,6 +25,17 @@ class FakeChatService:
         return self.response
 
 
+class FakeLogger:
+    def log_info(self, message):
+        pass
+
+    def log_warning(self, message):
+        pass
+
+    def log_error(self, message):
+        pass
+
+
 class ChatMessageControllerTest(unittest.IsolatedAsyncioTestCase):
     async def test_execute_returns_success_payload(self):
         response_data = ChatMessageResponseDataDTO(
@@ -37,7 +48,7 @@ class ChatMessageControllerTest(unittest.IsolatedAsyncioTestCase):
             artifact=None,
         )
         service = FakeChatService(response_data)
-        controller = ChatMessageController(service)
+        controller = ChatMessageController(service, logger=FakeLogger())
         request = ChatMessageRequestDTO(
             user_id=1,
             message="hello",
@@ -59,7 +70,7 @@ class ChatMessageControllerTest(unittest.IsolatedAsyncioTestCase):
                 details=["message is required"],
             )
         )
-        controller = ChatMessageController(service)
+        controller = ChatMessageController(service, logger=FakeLogger())
         request = ChatMessageRequestDTO(
             user_id=1,
             message="hello",
@@ -79,31 +90,18 @@ class ChatMessageControllerTest(unittest.IsolatedAsyncioTestCase):
             },
         )
 
-    async def test_execute_translates_unexpected_error_to_internal_error(self):
+    async def test_execute_propagates_unexpected_error(self):
         service = FakeChatService(exception=RuntimeError("boom"))
-        controller = ChatMessageController(service)
+        controller = ChatMessageController(service, logger=FakeLogger())
         request = ChatMessageRequestDTO(
             user_id=1,
             message="hello",
         )
 
-        with self.assertRaises(HTTPException) as context:
+        with self.assertRaises(RuntimeError) as context:
             await controller.execute(request)
 
-        self.assertEqual(context.exception.status_code, 500)
-        self.assertEqual(
-            context.exception.detail,
-            {
-                "success": False,
-                "message": (
-                    "Internal server error during chat message processing."
-                ),
-                "data": None,
-                "errors": [
-                    "An unexpected internal error occurred.",
-                ],
-            },
-        )
+        self.assertEqual(str(context.exception), "boom")
 
 
 if __name__ == "__main__":

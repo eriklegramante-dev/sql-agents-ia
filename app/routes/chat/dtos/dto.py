@@ -1,7 +1,8 @@
-from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from app.chat.models import ArtifactContent, MetadataValue
 
 
 class ChatMessageRequestDTO(BaseModel):
@@ -44,14 +45,32 @@ class ChatMessageRequestDTO(BaseModel):
         default=None,
         description="Optional chat session identifier.",
     )
-    metadata: dict[str, Any] | None = Field(
+    metadata: dict[str, MetadataValue] | None = Field(
         default=None,
         description="Optional contextual metadata associated with the message.",
     )
 
     @field_validator("user_id")
     @classmethod
-    def validate_user_id(cls, value: int | str) -> int | str:
+    def validate_user_id(
+        cls,
+        value: int | str
+    ) -> int | str:
+        """
+        Validates and normalizes the user identifier.
+
+        Args:
+            value:
+                User identifier received in the request payload.
+
+        Returns:
+            int | str:
+                Normalized user identifier after validation.
+
+        Raises:
+            ValueError:
+                If the user identifier is empty or otherwise invalid.
+        """
         if isinstance(value, int):
             if value <= 0:
                 raise ValueError("User ID must be greater than zero.")
@@ -67,7 +86,25 @@ class ChatMessageRequestDTO(BaseModel):
 
     @field_validator("message")
     @classmethod
-    def normalize_message(cls, value: str) -> str:
+    def normalize_message(
+        cls,
+        value: str
+    ) -> str:
+        """
+        Validates and normalizes the user message.
+
+        Args:
+            value:
+                Message received in the request payload.
+
+        Returns:
+            str:
+                Normalized message with surrounding whitespace removed.
+
+        Raises:
+            ValueError:
+                If the message is empty after normalization.
+        """
         normalized_value = value.strip()
 
         if not normalized_value:
@@ -77,7 +114,26 @@ class ChatMessageRequestDTO(BaseModel):
 
     @field_validator("session_id")
     @classmethod
-    def normalize_session_id(cls, value: str | None) -> str | None:
+    def normalize_session_id(
+        cls,
+        value: str | None
+    ) -> str | None:
+        """
+        Validates the optional session identifier.
+
+        Args:
+            value:
+                Session identifier received in the request payload.
+
+        Returns:
+            str | None:
+                Normalized session identifier or None when omitted.
+
+        Raises:
+            ValueError:
+                If the session identifier is provided but is empty after
+                normalization.
+        """
         if value is None:
             return None
 
@@ -108,8 +164,8 @@ class ChatArtifactDTO(BaseModel):
         min_length=1,
         description="Artifact type, such as table or chart.",
     )
-    content: dict[str, Any] = Field(
-        default_factory=dict,
+    content: ArtifactContent = Field(
+        ...,
         description="Structured artifact content returned by the analysis tool.",
     )
 
@@ -176,4 +232,4 @@ class ChatMessageResponseDTO(BaseModel):
     success: bool
     message: str
     data: ChatMessageResponseDataDTO | None = None
-    errors: list[Any] | None = None
+    errors: list[str] | None = None

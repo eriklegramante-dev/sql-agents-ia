@@ -16,6 +16,11 @@ class FakeChatWorkflow:
         return self.result
 
 
+class FakeLogger:
+    def log_info(self, message):
+        pass
+
+
 class ChatMessageServiceTest(unittest.IsolatedAsyncioTestCase):
     async def test_execute_maps_request_to_workflow_input_and_response_dto(self):
         workflow = FakeChatWorkflow(
@@ -28,11 +33,21 @@ class ChatMessageServiceTest(unittest.IsolatedAsyncioTestCase):
                 dataset_id=DATASET_ID,
                 artifact=ChatArtifact(
                     type="chart",
-                    content={"kind": "bar"},
+                    content={
+                        "chart_type": "bar",
+                        "title": "Sales",
+                        "labels": ["Jan"],
+                        "series": [
+                            {
+                                "name": "sales",
+                                "values": [100],
+                            }
+                        ],
+                    },
                 ),
             )
         )
-        service = ChatMessageService(workflow)
+        service = ChatMessageService(workflow, logger=FakeLogger())
         request = ChatMessageRequestDTO(
             user_id=1,
             message="chart sales",
@@ -55,7 +70,20 @@ class ChatMessageServiceTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.tool_used, "chart_tool")
         self.assertEqual(response.dataset_id, DATASET_ID)
         self.assertEqual(response.artifact.type, "chart")
-        self.assertEqual(response.artifact.content, {"kind": "bar"})
+        self.assertEqual(
+            response.artifact.content,
+            {
+                "chart_type": "bar",
+                "title": "Sales",
+                "labels": ["Jan"],
+                "series": [
+                    {
+                        "name": "sales",
+                        "values": [100],
+                    }
+                ],
+            },
+        )
 
     async def test_execute_maps_missing_artifact_to_none(self):
         workflow = FakeChatWorkflow(
@@ -69,7 +97,7 @@ class ChatMessageServiceTest(unittest.IsolatedAsyncioTestCase):
                 artifact=None,
             )
         )
-        service = ChatMessageService(workflow)
+        service = ChatMessageService(workflow, logger=FakeLogger())
         request = ChatMessageRequestDTO(
             user_id="user-1",
             message="hello",

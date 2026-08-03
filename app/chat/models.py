@@ -1,8 +1,67 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any
+from typing import TypedDict
 from uuid import UUID
 
+
+ScalarValue = str | int | float | bool | None
+MetadataValue = str | int | float | bool | None
+
+
+class QueryResult(TypedDict):
+    """
+    Represents the structured result of an analytical query.
+
+    Attributes:
+        columns:
+            Ordered names of the columns returned by the query.
+
+        rows:
+            Query result rows mapped by column name.
+    """
+    columns: list[str]
+    rows: list[dict[str, ScalarValue]]
+
+class ChartSeries(TypedDict):
+    """
+    Represents a single data series in a chart.
+
+    Attributes:
+        name:
+            Name of the data series.
+
+        values:
+            List of values associated with the data series.
+    """
+
+    name: str
+    values: list[int | float]
+
+class ChartResult(TypedDict):
+    """
+    Represents the structured result of chart generation.
+
+    Attributes:
+        chart_type:
+            Type of chart to be rendered.
+
+        title:
+            Human-readable chart title.
+
+        labels:
+            Labels associated with the chart values.
+
+        series:
+            Data series rendered by the chart.
+    """
+
+    chart_type: str
+    title: str
+    labels: list[str]
+    series: list[ChartSeries]
+
+
+ArtifactContent = QueryResult | ChartResult
 
 class ChatIntent(str, Enum):
     """
@@ -89,7 +148,7 @@ class ChatMessageInput:
     message: str
     dataset_id: UUID | None
     session_id: str | None
-    metadata: dict[str, Any] | None
+    metadata: dict[str, MetadataValue] | None
 
 
 @dataclass
@@ -106,7 +165,7 @@ class ChatArtifact:
     """
 
     type: str
-    content: dict[str, Any]
+    content: ArtifactContent
 
 
 @dataclass

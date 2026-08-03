@@ -47,7 +47,7 @@ class ChatMessageService:
         logger: LoggerManager | None = None,
     ) -> None:
         self._workflow = workflow
-        self._logger = logger or LOGGER
+        self._logger = logger 
 
     async def execute(
         self,
