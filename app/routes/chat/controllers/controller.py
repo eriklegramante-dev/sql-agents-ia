@@ -1,6 +1,6 @@
 from fastapi import HTTPException
 
-from app.logs.setup_logger import LOGGER, LoggerManager
+from app.logs.setup_logger import LoggerManager
 from app.prepare.exceptions import AppException
 from app.routes.chat.dtos.dto import (
     ChatMessageRequestDTO,
@@ -35,7 +35,7 @@ class ChatMessageController:
             execution flow.
 
         logger:
-            Optional logger manager used to record controller execution events
+            Logger manager used to record controller execution events
             and unexpected failures.
 
     Attributes:
@@ -51,7 +51,7 @@ class ChatMessageController:
     def __init__(
         self,
         service: ChatMessageService,
-        logger: LoggerManager | None = None,
+        logger: LoggerManager,
     ) -> None:
         self._service = service
         self._logger = logger

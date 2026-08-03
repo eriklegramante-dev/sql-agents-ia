@@ -16,6 +16,24 @@ async def execute_default_assistant(
     message: str,
     preferences: ChatPreferences,
 ) -> str:
+    """
+    Generates the default assistant response used by the dependency
+    composition layer.
+
+    This executor provides a temporary implementation until the
+    conversational assistant is integrated with the application.
+
+    Args:
+        message:
+            User message to be processed.
+
+        preferences:
+            Effective chat preferences applied to the generated response.
+
+    Returns:
+        str:
+            Temporary assistant response.
+    """
     return f"{preferences.persona_name} received your message: {message}"
 
 
@@ -23,6 +41,23 @@ async def execute_default_query(
     dataset_id: UUID,
     message: str,
 ) -> QueryResult:
+    """
+    Executes the default analytical query implementation.
+
+    This executor provides a temporary query result used by the dependency
+    composition layer until the analytical query engine is integrated.
+
+    Args:
+        dataset_id:
+            Identifier of the dataset selected for analysis.
+
+        message:
+            Analytical question submitted by the user.
+
+    Returns:
+        QueryResult:
+            Temporary structured query result.
+    """
     return {
         "columns": ["message"],
         "rows": [{"message": message}],
@@ -33,6 +68,23 @@ async def execute_default_chart(
     dataset_id: UUID,
     message: str,
 ) -> ChartResult:
+    """
+    Generates the default chart implementation.
+
+    This executor provides a temporary chart result used by the dependency
+    composition layer until the chart generation engine is integrated.
+
+    Args:
+        dataset_id:
+            Identifier of the dataset selected for visualization.
+
+        message:
+            User request describing the desired chart.
+
+    Returns:
+        ChartResult:
+            Temporary structured chart result.
+    """
     return {
         "chart_type": "bar",
         "title": message,

@@ -1,6 +1,6 @@
 from app.chat.models import ChatMessageInput
 from app.core.chat.workflow import ChatMessageWorkflow
-from app.logs.setup_logger import LOGGER, LoggerManager
+from app.logs.setup_logger import LoggerManager
 from app.routes.chat.dtos.dto import (
     ChatArtifactDTO,
     ChatMessageRequestDTO,
@@ -30,7 +30,7 @@ class ChatMessageService:
             processing flow.
 
         logger:
-            Optional logger manager used to record service execution events.
+            Logger manager used to record service execution events.
 
     Attributes:
         workflow:
@@ -44,7 +44,7 @@ class ChatMessageService:
     def __init__(
         self,
         workflow: ChatMessageWorkflow,
-        logger: LoggerManager | None = None,
+        logger: LoggerManager,
     ) -> None:
         self._workflow = workflow
         self._logger = logger 

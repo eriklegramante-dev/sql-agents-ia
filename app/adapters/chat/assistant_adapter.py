@@ -65,7 +65,7 @@ class AssistantAdapter:
         answer = await self._executor(
             message,
             preferences,
-    )
+        )
 
         normalized_answer = answer.strip()
 
