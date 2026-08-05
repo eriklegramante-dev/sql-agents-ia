@@ -9,6 +9,7 @@ from app.routes.update.route import router as update_router
 from app.routes.uploads.route import router as uploads_router
 from app.routes.profiling.route import router as profiling_router
 
+from app.routes.datasets.route import router as datasets_router
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -37,4 +38,9 @@ api_router.include_router(
 api_router.include_router(
     profiling_router,
     tags=["Profiling"]
+)
+
+api_router.include_router(
+    datasets_router,
+    tags=["Datasets"],
 )

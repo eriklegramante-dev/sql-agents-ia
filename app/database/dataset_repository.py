@@ -1,5 +1,5 @@
 import json
-from typing import Optional
+from typing import Any, Optional
 from uuid import UUID
 
 from app.database.repository import BaseRepository
@@ -27,17 +27,128 @@ class DatasetRepository(BaseRepository[DatasetTable]):
             and schema persistence operations.
     """
 
-    async def get_by_id(self, dataset_id: UUID) -> Optional[DatasetTable]:
+    def _build_dataset(
+        self,
+        row: Any,
+    ) -> DatasetTable:
         """
-        Retrieves dataset metadata by its unique identifier.
+        Build a DatasetTable instance from a database row.
+
+        This helper centralizes the conversion between database records and the
+        application model, avoiding duplicated mapping logic across repository
+        methods.
 
         Args:
-            dataset_id (UUID):
+            row:
+                Database row returned by asyncpg.
+
+        Returns:
+            DatasetTable:
+                Fully populated dataset model.
+        """
+        return DatasetTable(
+            id=row["id"],
+            name=row["name"],
+            filename=row["filename"],
+            status=DatasetStatus(row["status"]),
+            raw_object_key=row["raw_object_key"],
+            prepared_object_key=row["prepared_object_key"],
+            user_id=row["user_id"],
+            description=row["description"],
+            file_type=row["file_type"],
+            content_type=row["content_type"],
+            file_size_bytes=row["file_size_bytes"],
+            current_upload_job_id=row["current_upload_job_id"],
+            rows_count=row["rows_count"],
+            columns_count=row["columns_count"],
+            error_message=row["error_message"],
+            created_at=row["created_at"],
+            updated_at=row["updated_at"],
+        )
+
+    async def create(
+        self,
+        dataset: DatasetTable,
+    ) -> DatasetTable:
+        """
+        Persist a newly created dataset.
+
+        This method is used during upload initialization to register the
+        dataset metadata before the multipart upload begins.
+
+        Args:
+            dataset:
+                Dataset metadata to be persisted.
+
+        Returns:
+            DatasetTable:
+                The persisted dataset metadata.
+        """
+        async with self.pool.acquire() as connection:
+            await connection.execute(
+                """
+                INSERT INTO datasets (
+                    id,
+                    name,
+                    filename,
+                    status,
+                    raw_object_key,
+                    prepared_object_key,
+                    user_id,
+                    description,
+                    file_type,
+                    content_type,
+                    file_size_bytes,
+                    current_upload_job_id
+                )
+                VALUES (
+                    $1,
+                    $2,
+                    $3,
+                    $4,
+                    $5,
+                    $6,
+                    $7,
+                    $8,
+                    $9,
+                    $10,
+                    $11,
+                    $12
+                )
+                """,
+                dataset.id,
+                dataset.name,
+                dataset.filename,
+                dataset.status.value,
+                dataset.raw_object_key,
+                dataset.prepared_object_key,
+                dataset.user_id,
+                dataset.description,
+                dataset.file_type,
+                dataset.content_type,
+                dataset.file_size_bytes,
+                dataset.current_upload_job_id,
+            )
+
+        return dataset
+
+    async def get_by_id(
+        self,
+        dataset_id: UUID,
+    ) -> Optional[DatasetTable]:
+        """
+        Retrieve dataset metadata by its unique identifier.
+
+        Args:
+            dataset_id:
                 Unique identifier of the dataset.
 
         Returns:
-            Optional[DatasetTable]:
-                Dataset metadata when found, otherwise None.
+            DatasetTable:
+                Dataset metadata when found.
+
+            None:
+                If the dataset does not exist.
         """
         async with self.pool.acquire() as connection:
             row = await connection.fetchrow(
@@ -45,9 +156,16 @@ class DatasetRepository(BaseRepository[DatasetTable]):
                 SELECT
                     id,
                     name,
+                    filename,
                     status,
                     raw_object_key,
                     prepared_object_key,
+                    user_id,
+                    description,
+                    file_type,
+                    content_type,
+                    file_size_bytes,
+                    current_upload_job_id,
                     rows_count,
                     columns_count,
                     error_message,
@@ -62,18 +180,108 @@ class DatasetRepository(BaseRepository[DatasetTable]):
         if row is None:
             return None
 
-        return DatasetTable(
-            id=row["id"],
-            name=row["name"],
-            status=DatasetStatus(row["status"]),
-            raw_object_key=row["raw_object_key"],
-            prepared_object_key=row["prepared_object_key"],
-            rows_count=row["rows_count"],
-            columns_count=row["columns_count"],
-            error_message=row["error_message"],
-            created_at=row["created_at"],
-            updated_at=row["updated_at"],
-        )
+        return self._build_dataset(row)
+
+    async def find_by_upload(
+        self,
+        dataset_id: UUID,
+        upload_id: str,
+    ) -> Optional[DatasetTable]:
+        """
+        Retrieve dataset metadata associated with an active multipart upload.
+
+        This method is used during upload completion and abort workflows to
+        locate the dataset linked to the provided upload identifier.
+
+        Args:
+            dataset_id:
+                Dataset identifier.
+            upload_id:
+                Multipart upload identifier.
+
+        Returns:
+            DatasetTable:
+                Dataset metadata when found.
+
+            None:
+                If no matching upload exists.
+        """
+        async with self.pool.acquire() as connection:
+            row = await connection.fetchrow(
+                """
+                SELECT
+                    id,
+                    name,
+                    filename,
+                    status,
+                    raw_object_key,
+                    prepared_object_key,
+                    user_id,
+                    description,
+                    file_type,
+                    content_type,
+                    file_size_bytes,
+                    current_upload_job_id,
+                    rows_count,
+                    columns_count,
+                    error_message,
+                    created_at,
+                    updated_at
+                FROM datasets
+                WHERE
+                    id = $1
+                AND current_upload_job_id = $2
+                """,
+                dataset_id,
+                upload_id,
+            )
+
+        if row is None:
+            return None
+
+        return self._build_dataset(row)
+
+    async def update_upload_status(
+        self,
+        dataset_id: UUID,
+        upload_id: str,
+        status: DatasetStatus,
+    ) -> bool:
+        """
+        Update the status of a dataset identified by both the dataset ID and
+        the active multipart upload ID.
+
+        This method guarantees that only the dataset currently associated with
+        the specified multipart upload is updated.
+
+        Args:
+            dataset_id:
+                Dataset identifier.
+            upload_id:
+                Multipart upload identifier.
+            status:
+                New dataset status.
+
+        Returns:
+            True when exactly one dataset row is updated, otherwise False.
+        """
+        async with self.pool.acquire() as connection:
+            result = await connection.execute(
+                """
+                UPDATE datasets
+                SET
+                    status = $3,
+                    updated_at = NOW()
+                WHERE
+                    id = $1
+                AND current_upload_job_id = $2
+                """,
+                dataset_id,
+                upload_id,
+                status.value,
+            )
+
+        return result == "UPDATE 1"
 
     async def update_status(
         self,
@@ -82,19 +290,19 @@ class DatasetRepository(BaseRepository[DatasetTable]):
         error_message: Optional[str] = None,
     ) -> bool:
         """
-        Updates the processing status of a dataset.
+        Update the processing status of a dataset.
 
         Args:
-            dataset_id (UUID):
+            dataset_id:
                 Unique identifier of the dataset.
-            status (DatasetStatus):
+            status:
                 New dataset processing status.
-            error_message (Optional[str]):
-                Optional error message to persist when processing fails.
+            error_message:
+                Optional error message associated with the update.
 
         Returns:
             bool:
-                True when exactly one dataset row is updated, otherwise False.
+                True when exactly one dataset row is updated.
         """
         async with self.pool.acquire() as connection:
             result = await connection.execute(
@@ -121,25 +329,20 @@ class DatasetRepository(BaseRepository[DatasetTable]):
         columns_count: int,
     ) -> Optional[DatasetTable]:
         """
-        Persists metadata generated after successful dataset preparation.
-
-        Updates the prepared object key, row count, column count, status,
-        error message, and update timestamp. The updated row is returned so the
-        workflow can build its response from persisted metadata.
+        Persist metadata generated after successful dataset preparation.
 
         Args:
-            dataset_id (UUID):
-                Unique identifier of the dataset.
-            prepared_object_key (str):
-                Object key of the generated prepared Parquet file.
-            rows_count (int):
-                Number of rows in the prepared dataset.
-            columns_count (int):
-                Number of columns in the prepared dataset.
+            dataset_id:
+                Dataset identifier.
+            prepared_object_key:
+                Generated Parquet object key.
+            rows_count:
+                Dataset row count.
+            columns_count:
+                Dataset column count.
 
         Returns:
-            Optional[DatasetTable]:
-                Updated dataset metadata when the row exists, otherwise None.
+            Updated dataset metadata.
         """
         async with self.pool.acquire() as connection:
             row = await connection.fetchrow(
@@ -156,9 +359,16 @@ class DatasetRepository(BaseRepository[DatasetTable]):
                 RETURNING
                     id,
                     name,
+                    filename,
                     status,
                     raw_object_key,
                     prepared_object_key,
+                    user_id,
+                    description,
+                    file_type,
+                    content_type,
+                    file_size_bytes,
+                    current_upload_job_id,
                     rows_count,
                     columns_count,
                     error_message,
@@ -175,18 +385,7 @@ class DatasetRepository(BaseRepository[DatasetTable]):
         if row is None:
             return None
 
-        return DatasetTable(
-            id=row["id"],
-            name=row["name"],
-            status=DatasetStatus(row["status"]),
-            raw_object_key=row["raw_object_key"],
-            prepared_object_key=row["prepared_object_key"],
-            rows_count=row["rows_count"],
-            columns_count=row["columns_count"],
-            error_message=row["error_message"],
-            created_at=row["created_at"],
-            updated_at=row["updated_at"],
-        )
+        return self._build_dataset(row)
 
     async def save_schema(
         self,
@@ -194,21 +393,17 @@ class DatasetRepository(BaseRepository[DatasetTable]):
         schema_data: list[ColumnSchema],
     ) -> bool:
         """
-        Persists the inferred schema for a dataset.
-
-        Serializes the inferred column definitions to JSON and upserts them in
-        the dataset schema table. Existing schema metadata for the same dataset
-        is replaced with the latest inferred schema.
+        Persist the inferred schema generated for a dataset.
 
         Args:
-            dataset_id (UUID):
-                Unique identifier of the dataset.
-            schema_data (list[ColumnSchema]):
-                Inferred schema generated during dataset preparation.
+            dataset_id:
+                Dataset identifier.
+            schema_data:
+                Collection of inferred dataset columns.
 
         Returns:
             bool:
-                True when the schema persistence operation completes.
+                True when the schema is successfully persisted.
         """
         schema_json = json.dumps(
             [column.model_dump(mode="json") for column in schema_data]
@@ -217,7 +412,12 @@ class DatasetRepository(BaseRepository[DatasetTable]):
         async with self.pool.acquire() as connection:
             await connection.execute(
                 """
-                INSERT INTO dataset_schemas (dataset_id, columns, created_at, updated_at)
+                INSERT INTO dataset_schemas (
+                    dataset_id,
+                    columns,
+                    created_at,
+                    updated_at
+                )
                 VALUES ($1, $2, NOW(), NOW())
                 ON CONFLICT (dataset_id)
                 DO UPDATE SET
@@ -230,17 +430,23 @@ class DatasetRepository(BaseRepository[DatasetTable]):
 
         return True
 
-    async def get_schema(self, dataset_id: UUID) -> Optional[list[ColumnSchema]]:
+    async def get_schema(
+        self,
+        dataset_id: UUID,
+    ) -> Optional[list[ColumnSchema]]:
         """
-        Retrieves the persisted inferred schema of a dataset.
+        Retrieve the persisted schema associated with a dataset.
 
         Args:
-            dataset_id (UUID):
-                Unique identifier of the dataset.
+            dataset_id:
+                Dataset identifier.
 
         Returns:
-            Optional[list[ColumnSchema]]:
-                Persisted column schema when available, otherwise None.
+            list[ColumnSchema]:
+                Persisted schema when available.
+
+            None:
+                If no schema has been stored.
         """
         async with self.pool.acquire() as connection:
             row = await connection.fetchrow(
@@ -262,23 +468,19 @@ class DatasetRepository(BaseRepository[DatasetTable]):
 
         return [ColumnSchema(**column) for column in columns]
 
-
     async def save_profile(
         self,
         dataset_id: UUID,
         profile: dict,
     ) -> bool:
         """
-        Persist dataset profiling metadata.
-
-        Creates or updates the profiling metadata associated with a dataset.
-        The profile is stored as JSONB in the ``dataset_profiles`` table.
+        Persist profiling metadata generated for a dataset.
 
         Args:
             dataset_id:
-                Identifier of the dataset.
+                Dataset identifier.
             profile:
-                Generated profiling metadata.
+                Generated profiling information.
 
         Returns:
             bool:

@@ -22,13 +22,9 @@ from app.routes.uploads.services.service import UploadService
 class UploadController:
     """Controller responsible for handling upload HTTP requests.
 
-    Attributes:
-        service: Executes upload use cases delegated by the controller.
-        logger: Records controller execution events.
-
-    Args:
-        service: Fully configured upload service used by this controller.
-        logger: Logger instance used by this controller.
+    This controller receives validated DTOs from the FastAPI routes,
+    delegates the business execution to the UploadService and transforms
+    the returned data into standardized HTTP responses.
     """
 
     def __init__(
@@ -45,7 +41,7 @@ class UploadController:
         self.service = service
         self.logger = logger or LOGGER
 
-    def initialize_upload(
+    async def initialize_upload(
         self,
         request: UploadInitRequestDTO,
     ) -> JSONResponse:
@@ -55,13 +51,13 @@ class UploadController:
             request: Validated upload initialization request.
 
         Returns:
-            Standardized JSON response.
+            JSONResponse containing the upload initialization metadata.
         """
         try:
             self.logger.log_info(
                 "[upload:init:controller] Received upload initialization request"
             )
-            result = self.service.initialize_upload(request)
+            result = await self.service.initialize_upload(request)
             response = UploadInitResponseDTO(
                 success=True,
                 message="Upload initialized successfully.",
@@ -84,12 +80,12 @@ class UploadController:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 content={
                     "success": False,
-                    "message": str(exc),
+                    "message": "The upload initialization request is invalid.",
                     "data": None,
                 },
             )
 
-    def complete_upload(
+    async def complete_upload(
         self,
         request: UploadCompleteRequestDTO,
     ) -> JSONResponse:
@@ -99,15 +95,15 @@ class UploadController:
             request: Validated upload completion request.
 
         Returns:
-            Standardized JSON response containing final upload metadata.
+            JSONResponse containing the finalized multipart upload metadata.
         """
         try:
             self.logger.log_info(
                 "[upload:complete:controller] Received upload completion request"
             )
 
-            result = self.service.complete_upload(
-                dataset_id=str(request.dataset_id),
+            result = await self.service.complete_upload(
+                dataset_id=(request.dataset_id),
                 upload_id=request.upload_id,
                 parts=[part.model_dump() for part in request.parts],
             )
@@ -152,7 +148,7 @@ class UploadController:
                 },
             )
 
-    def abort_upload(
+    async def abort_upload(
         self,
         request: UploadAbortRequestDTO,
     ) -> JSONResponse:
@@ -162,15 +158,15 @@ class UploadController:
             request: Validated upload abort request.
 
         Returns:
-            Standardized JSON response containing final upload statuses.
+            JSONResponse containing the final upload statuses.
         """
         try:
             self.logger.log_info(
                 "[upload:abort:controller] Received upload abort request"
             )
 
-            result = self.service.abort_upload(
-                dataset_id=str(request.dataset_id),
+            result = await self.service.abort_upload(
+                dataset_id=(request.dataset_id),
                 upload_id=request.upload_id,
             )
             response = UploadAbortResponseDTO(
@@ -207,7 +203,7 @@ class UploadController:
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 content={
                     "success": False,
-                    "message": str(exc),
+                    "message": "The upload initialization request is invalid.",
                     "data": None,
                 },
             )

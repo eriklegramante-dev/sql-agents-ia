@@ -150,6 +150,7 @@ class MinioMultipartClientAdapter:
                 upload_id=upload_id,
                 parts=minio_parts,
             )
+
         except (S3Error, HTTPError) as exc:
             raise StorageOperationError(
                 operation="complete multipart upload"

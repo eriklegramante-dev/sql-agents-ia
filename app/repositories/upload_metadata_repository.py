@@ -1,28 +1,32 @@
 from abc import ABC, abstractmethod
 from typing import Any
 
+from uuid import UUID
 
 class UploadMetadataRepository(ABC):
     """Repository abstraction responsible for upload metadata persistence."""
 
     @abstractmethod
-    def create(self, metadata: dict[str, Any]) -> None:
+    async def create(
+        self,
+        metadata: dict[str, Any],
+    ) -> None:
         """Persist upload metadata."""
         raise NotImplementedError
 
     @abstractmethod
-    def find_by_dataset_and_upload(
+    async def find_by_dataset_and_upload(
         self,
-        dataset_id: str,
+        dataset_id: UUID,
         upload_id: str,
     ) -> dict[str, Any] | None:
         """Retrieve upload metadata."""
         raise NotImplementedError
 
     @abstractmethod
-    def update_status(
+    async def update_status(
         self,
-        dataset_id: str,
+        dataset_id: UUID    ,
         upload_id: str,
         upload_status: str,
         dataset_status: str,
@@ -31,9 +35,9 @@ class UploadMetadataRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def store_completed_parts(
+    async def store_completed_parts(
         self,
-        dataset_id: str,
+        dataset_id: UUID,
         upload_id: str,
         parts: list[dict[str, Any]],
     ) -> None:

@@ -1,3 +1,5 @@
+import pytest
+
 from app.routes.uploads.dtos.dto import UploadInitRequestDTO
 from app.routes.uploads.services.service import UploadService
 
@@ -6,9 +8,15 @@ class FakeInitWorkflow:
     def __init__(self) -> None:
         self.received_request = None
 
-    def run(self, request: UploadInitRequestDTO) -> dict:
+    async def run(
+        self,
+        request: UploadInitRequestDTO,
+    ) -> dict:
         self.received_request = request
-        return {"status": "UPLOADING"}
+
+        return {
+            "status": "UPLOADING"
+        }
 
 
 class FakeCompleteWorkflow:
@@ -17,12 +25,13 @@ class FakeCompleteWorkflow:
         self.received_upload_id = None
         self.received_parts = None
 
-    def run(
+    async def run(
         self,
         dataset_id: str,
         upload_id: str,
         parts: list[dict],
     ) -> dict:
+
         self.received_dataset_id = dataset_id
         self.received_upload_id = upload_id
         self.received_parts = parts
@@ -41,7 +50,12 @@ class FakeAbortWorkflow:
         self.received_dataset_id = None
         self.received_upload_id = None
 
-    def run(self, dataset_id: str, upload_id: str) -> dict:
+    async def run(
+        self,
+        dataset_id: str,
+        upload_id: str,
+    ) -> dict:
+
         self.received_dataset_id = dataset_id
         self.received_upload_id = upload_id
 
@@ -59,6 +73,7 @@ def build_service() -> tuple[
     FakeCompleteWorkflow,
     FakeAbortWorkflow,
 ]:
+
     init_workflow = FakeInitWorkflow()
     complete_workflow = FakeCompleteWorkflow()
     abort_workflow = FakeAbortWorkflow()
@@ -77,8 +92,11 @@ def build_service() -> tuple[
     )
 
 
-def test_initialize_upload_delegates_to_workflow() -> None:
+@pytest.mark.asyncio
+async def test_initialize_upload_delegates_to_workflow() -> None:
+
     service, init_workflow, _, _ = build_service()
+
     request = UploadInitRequestDTO(
         filename="customers.csv",
         content_type="text/csv",
@@ -87,36 +105,66 @@ def test_initialize_upload_delegates_to_workflow() -> None:
         description=None,
     )
 
-    result = service.initialize_upload(request)
+    result = await service.initialize_upload(request)
 
-    assert result == {"status": "UPLOADING"}
+    assert result == {
+        "status": "UPLOADING"
+    }
+
     assert init_workflow.received_request == request
 
 
-def test_complete_upload_delegates_to_workflow() -> None:
-    service, _, complete_workflow, _ = build_service()
-    parts = [{"part_number": 1, "etag": "etag-1"}]
+@pytest.mark.asyncio
+async def test_complete_upload_delegates_to_workflow() -> None:
 
-    result = service.complete_upload(
+    service, _, complete_workflow, _ = build_service()
+
+    parts = [
+        {
+            "part_number": 1,
+            "etag": "etag-1",
+        }
+    ]
+
+    result = await service.complete_upload(
         dataset_id="dataset-1",
         upload_id="upload-1",
         parts=parts,
     )
 
     assert result["status"] == "COMPLETED"
-    assert complete_workflow.received_dataset_id == "dataset-1"
-    assert complete_workflow.received_upload_id == "upload-1"
+
+    assert (
+        complete_workflow.received_dataset_id
+        == "dataset-1"
+    )
+
+    assert (
+        complete_workflow.received_upload_id
+        == "upload-1"
+    )
+
     assert complete_workflow.received_parts == parts
 
 
-def test_abort_upload_delegates_to_workflow() -> None:
+@pytest.mark.asyncio
+async def test_abort_upload_delegates_to_workflow() -> None:
+
     service, _, _, abort_workflow = build_service()
 
-    result = service.abort_upload(
+    result = await service.abort_upload(
         dataset_id="dataset-1",
         upload_id="upload-1",
     )
 
     assert result["upload_status"] == "ABORTED"
-    assert abort_workflow.received_dataset_id == "dataset-1"
-    assert abort_workflow.received_upload_id == "upload-1"
+
+    assert (
+        abort_workflow.received_dataset_id
+        == "dataset-1"
+    )
+
+    assert (
+        abort_workflow.received_upload_id
+        == "upload-1"
+    )

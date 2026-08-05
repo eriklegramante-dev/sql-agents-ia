@@ -1,9 +1,26 @@
 version: '3.9'
 
 services:
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: sql-agents-ia-postgres
+
+    environment:
+      POSTGRES_DB: sql_agents
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
   minio:
     image: minio/minio:latest
     container_name: sql-agents-ia-minio
+
     command: server /data --console-address ":9001"
 
     environment:
@@ -18,4 +35,5 @@ services:
       - minio_data:/data
 
 volumes:
+  postgres_data:
   minio_data:

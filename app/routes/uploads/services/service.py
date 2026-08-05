@@ -4,21 +4,17 @@ from app.core.uploads.abort_workflow import UploadAbortWorkflow
 from app.core.uploads.complete_workflow import UploadCompletionWorkflow
 from app.core.uploads.workflow import UploadInitializationWorkflow
 from app.logs.setup_logger import LOGGER
+from app.routes.uploads.dtos.dto import UploadInitRequestDTO
 
+from uuid import UUID
 
 class UploadService:
-    """Service responsible for exposing upload use cases.
+    """Service layer responsible for orchestrating upload workflows.
 
-    Attributes:
-        workflow: Workflow responsible for upload initialization.
-        init_workflow: Alias for the upload initialization workflow.
-        complete_workflow: Workflow responsible for upload completion.
-        abort_workflow: Workflow responsible for upload abort.
-
-    Args:
-        init_workflow: Upload initialization workflow used by this service.
-        complete_workflow: Upload completion workflow used by this service.
-        abort_workflow: Upload abort workflow used by this service.
+    This service acts as an application layer between the HTTP controller
+    and the upload workflows. It delegates each upload operation to its
+    corresponding workflow while keeping controllers free from business
+    orchestration logic.
     """
 
     def __init__(
@@ -27,75 +23,108 @@ class UploadService:
         complete_workflow: UploadCompletionWorkflow,
         abort_workflow: UploadAbortWorkflow,
     ) -> None:
-        """Initialize the upload service.
+        """Create a new upload service.
 
         Args:
-            init_workflow: Workflow used to initialize uploads.
-            complete_workflow: Workflow used to complete uploads.
-            abort_workflow: Workflow used to abort uploads.
+            init_workflow:
+                Workflow responsible for initializing multipart uploads.
+            complete_workflow:
+                Workflow responsible for completing multipart uploads.
+            abort_workflow:
+                Workflow responsible for aborting multipart uploads.
         """
-        self.workflow = init_workflow
+        self.logger = LOGGER
         self.init_workflow = init_workflow
         self.complete_workflow = complete_workflow
         self.abort_workflow = abort_workflow
 
-    def initialize_upload(self, request: Any) -> dict[str, Any]:
-        """Initialize a dataset upload.
+    async def initialize_upload(
+        self,
+        request: UploadInitRequestDTO,
+    ) -> dict[str, Any]:
+        """Initialize a multipart upload.
 
         Args:
-            request: Validated upload initialization request.
+            request:
+                Validated upload initialization request.
 
         Returns:
-            Upload initialization result data.
+            Dictionary containing the initialized upload metadata.
         """
-        LOGGER.log_info("[upload:init:service] Starting upload initialization")
-        result = self.workflow.run(request)
-        LOGGER.log_info("[upload:init:service] Upload initialization finished")
+        self.logger.log_info(
+            "[upload:init:service] Starting upload initialization"
+        )
+
+        result = await self.init_workflow.run(request)
+
+        self.logger.log_info(
+            "[upload:init:service] Upload initialization finished"
+        )
+
         return result
 
-    def complete_upload(
+    async def complete_upload(
         self,
-        dataset_id: str,
+        dataset_id: UUID,
         upload_id: str,
         parts: list[dict[str, Any]],
     ) -> dict[str, Any]:
-        """Complete a dataset multipart upload.
+        """Complete a multipart upload.
 
         Args:
-            dataset_id: Dataset identifier associated with the upload.
-            upload_id: Multipart upload identifier to complete.
-            parts: Uploaded multipart parts.
+            dataset_id:
+                Dataset identifier associated with the upload.
+            upload_id:
+                Multipart upload identifier.
+            parts:
+                Uploaded multipart parts.
 
         Returns:
-            Upload completion result data.
+            Dictionary containing the completed upload metadata.
         """
-        LOGGER.log_info("[upload:complete:service] Starting upload completion")
-        result = self.complete_workflow.run(
+        self.logger.log_info(
+            "[upload:complete:service] Starting upload completion"
+        )
+
+        result = await self.complete_workflow.run(
             dataset_id=dataset_id,
             upload_id=upload_id,
             parts=parts,
         )
-        LOGGER.log_info("[upload:complete:service] Upload completion finished")
+
+        self.logger.log_info(
+            "[upload:complete:service] Upload completion finished"
+        )
+
         return result
 
-    def abort_upload(
+    async def abort_upload(
         self,
-        dataset_id: str,
+        dataset_id: UUID,
         upload_id: str,
     ) -> dict[str, Any]:
-        """Abort an unfinished dataset upload.
+        """Abort a multipart upload.
 
         Args:
-            dataset_id: Dataset identifier associated with the upload.
-            upload_id: Multipart upload identifier to abort.
+            dataset_id:
+                Dataset identifier associated with the upload.
+            upload_id:
+                Multipart upload identifier.
 
         Returns:
-            Upload abort result data.
+            Dictionary containing the final upload status.
         """
-        LOGGER.log_info("[upload:abort:service] Starting upload abort")
-        result = self.abort_workflow.run(
+        self.logger.log_info(
+            "[upload:abort:service] Starting upload abort"
+        )
+
+        result = await self.abort_workflow.run(
             dataset_id=dataset_id,
             upload_id=upload_id,
         )
-        LOGGER.log_info("[upload:abort:service] Upload abort finished")
+
+        self.logger.log_info(
+            "[upload:abort:service] Upload abort finished"
+        )
+
         return result

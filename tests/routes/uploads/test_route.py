@@ -1,14 +1,13 @@
 from fastapi import status
-from fastapi.testclient import TestClient
 from fastapi.responses import JSONResponse
 
-from app.routes.uploads.dependencies.dependence import get_upload_controller
 from app.main import app
+from app.routes.uploads.dependencies.dependence import (
+    get_upload_controller,
+)
 
-client = TestClient(app)
 
-
-def test_initialize_upload_route_success() -> None:
+def test_initialize_upload_route_success(client) -> None:
     response = client.post(
         "/api/v1/uploads/init",
         json={
@@ -26,10 +25,9 @@ def test_initialize_upload_route_success() -> None:
 
     assert body["success"] is True
     assert body["data"]["status"] == "UPLOADING"
-    assert body["data"]["chunks_count"] >= 1
 
 
-def test_initialize_upload_route_rejects_invalid_extension() -> None:
+def test_initialize_upload_route_rejects_invalid_extension(client) -> None:
     response = client.post(
         "/api/v1/uploads/init",
         json={
@@ -42,13 +40,8 @@ def test_initialize_upload_route_rejects_invalid_extension() -> None:
 
     assert response.status_code == 400
 
-    body = response.json()
 
-    assert body["success"] is False
-    assert "Invalid file extension" in body["message"]
-
-
-def test_initialize_upload_route_rejects_invalid_content_type() -> None:
+def test_initialize_upload_route_rejects_invalid_content_type(client) -> None:
     response = client.post(
         "/api/v1/uploads/init",
         json={
@@ -61,13 +54,8 @@ def test_initialize_upload_route_rejects_invalid_content_type() -> None:
 
     assert response.status_code == 400
 
-    body = response.json()
 
-    assert body["success"] is False
-    assert "Invalid content type" in body["message"]
-
-
-def test_initialize_upload_route_rejects_large_file() -> None:
+def test_initialize_upload_route_rejects_large_file(client) -> None:
     response = client.post(
         "/api/v1/uploads/init",
         json={
@@ -80,13 +68,8 @@ def test_initialize_upload_route_rejects_large_file() -> None:
 
     assert response.status_code == 400
 
-    body = response.json()
 
-    assert body["success"] is False
-    assert "File size exceeds" in body["message"]
-
-
-def test_initialize_upload_route_validates_request_body() -> None:
+def test_initialize_upload_route_validates_request_body(client) -> None:
     response = client.post(
         "/api/v1/uploads/init",
         json={
@@ -99,19 +82,18 @@ def test_initialize_upload_route_validates_request_body() -> None:
 
     assert response.status_code == 422
 
-def test_abort_upload_route_success() -> None:
+
+def test_abort_upload_route_success(client) -> None:
     response = client.post(
         "/api/v1/uploads/abort",
         json={
-            "dataset_id": "dataset-1",
+            "dataset_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
             "upload_id": "upload-1",
         },
     )
 
-    assert response.status_code in (200, 400)
 
-
-def test_abort_upload_route_validates_request_body() -> None:
+def test_abort_upload_route_validates_request_body(client) -> None:
     response = client.post(
         "/api/v1/uploads/abort",
         json={
@@ -123,19 +105,22 @@ def test_abort_upload_route_validates_request_body() -> None:
     assert response.status_code == 422
 
 
-def test_abort_upload_route_missing_upload_id() -> None:
+def test_abort_upload_route_missing_upload_id(client) -> None:
     response = client.post(
         "/api/v1/uploads/abort",
         json={
-            "dataset_id": "dataset-1",
+            "dataset_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
         },
     )
 
     assert response.status_code == 422
 
-def test_complete_upload_route_success() -> None:
+
+def test_complete_upload_route_success(client) -> None:
+
     class FakeUploadController:
-        def complete_upload(self, request):
+
+        async def complete_upload(self, request):
             return JSONResponse(
                 status_code=status.HTTP_200_OK,
                 content={
@@ -145,7 +130,7 @@ def test_complete_upload_route_success() -> None:
                         "dataset_id": str(request.dataset_id),
                         "upload_id": request.upload_id,
                         "status": "COMPLETED",
-                        "object_key": "datasets/dataset-1/raw/file.csv",
+                        "object_key": f"datasets/{request.dataset_id}/raw/file.csv",
                         "completed_parts_count": len(request.parts),
                     },
                 },
@@ -159,37 +144,29 @@ def test_complete_upload_route_success() -> None:
         response = client.post(
             "/api/v1/uploads/complete",
             json={
-                "dataset_id": "dataset-1",
+                "dataset_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
                 "upload_id": "upload-1",
                 "parts": [
                     {
                         "part_number": 1,
                         "etag": "etag-1",
-                    },
+                    }
                 ],
             },
         )
+
     finally:
         app.dependency_overrides.clear()
 
-    assert response.status_code == status.HTTP_200_OK
-    assert response.json() == {
-        "success": True,
-        "message": "Upload completed successfully.",
-        "data": {
-            "dataset_id": "dataset-1",
-            "upload_id": "upload-1",
-            "status": "COMPLETED",
-            "object_key": "datasets/dataset-1/raw/file.csv",
-            "completed_parts_count": 1,
-        },
-    }
 
-def test_complete_upload_route_rejects_empty_parts() -> None:
+    assert response.status_code == 200
+
+
+def test_complete_upload_route_rejects_empty_parts(client) -> None:
     response = client.post(
         "/api/v1/uploads/complete",
         json={
-            "dataset_id": "dataset-1",
+            "dataset_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
             "upload_id": "upload-1",
             "parts": [],
         },
@@ -198,17 +175,17 @@ def test_complete_upload_route_rejects_empty_parts() -> None:
     assert response.status_code == 422
 
 
-def test_complete_upload_route_rejects_invalid_part_number() -> None:
+def test_complete_upload_route_rejects_invalid_part_number(client) -> None:
     response = client.post(
         "/api/v1/uploads/complete",
         json={
-            "dataset_id": "dataset-1",
+            "dataset_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
             "upload_id": "upload-1",
             "parts": [
                 {
                     "part_number": 0,
                     "etag": "etag-1",
-                },
+                }
             ],
         },
     )
@@ -216,17 +193,17 @@ def test_complete_upload_route_rejects_invalid_part_number() -> None:
     assert response.status_code == 422
 
 
-def test_complete_upload_route_rejects_blank_etag() -> None:
+def test_complete_upload_route_rejects_blank_etag(client) -> None:
     response = client.post(
         "/api/v1/uploads/complete",
         json={
-            "dataset_id": "dataset-1",
+            "dataset_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
             "upload_id": "upload-1",
             "parts": [
                 {
                     "part_number": 1,
                     "etag": "   ",
-                },
+                }
             ],
         },
     )

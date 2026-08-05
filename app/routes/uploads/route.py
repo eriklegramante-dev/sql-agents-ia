@@ -19,20 +19,22 @@ router = APIRouter(prefix="/uploads", tags=["Uploads"])
     status_code=status.HTTP_201_CREATED,
     response_model=UploadInitResponseDTO,
 )
-def initialize_upload(
+async def initialize_upload(
     request: UploadInitRequestDTO,
     controller: UploadController = Depends(get_upload_controller),
 ):
-    """Initialize a dataset multipart upload.
+    """Create a new multipart upload session for a dataset.
 
     Args:
-        request: Validated upload initialization request.
-        controller: Injected upload controller.
+        request:
+            Validated upload initialization request.
+        controller:
+            Controller responsible for the upload flow.
 
     Returns:
-        Standardized upload initialization response.
+        JSON response containing the upload metadata and signed URLs.
     """
-    return controller.initialize_upload(request)
+    return await controller.initialize_upload(request)
 
 
 @router.post(
@@ -40,20 +42,23 @@ def initialize_upload(
     status_code=status.HTTP_200_OK,
     response_model=UploadCompleteResponseDTO,
 )
-def complete_upload(
+async def complete_upload(
     request: UploadCompleteRequestDTO,
     controller: UploadController = Depends(get_upload_controller),
-):
-    """Complete a dataset multipart upload.
+) -> UploadCompleteResponseDTO:
+    """Finalize a multipart dataset upload.
+
+    This endpoint validates the uploaded parts, completes the multipart
+    upload in object storage and updates the persisted dataset metadata.
 
     Args:
-        request: Validated upload completion request.
-        controller: Injected upload controller.
+        request: Validated upload completion payload.
+        controller: Configured upload controller.
 
     Returns:
-        Standardized upload completion response containing final metadata.
+        Standardized response containing the finalized upload metadata.
     """
-    return controller.complete_upload(request)
+    return await controller.complete_upload(request)
 
 
 @router.post(
@@ -61,17 +66,22 @@ def complete_upload(
     status_code=status.HTTP_200_OK,
     response_model=UploadAbortResponseDTO,
 )
-def abort_upload(
+async def abort_upload(
     request: UploadAbortRequestDTO,
     controller: UploadController = Depends(get_upload_controller),
-):
-    """Abort an unfinished dataset multipart upload.
+) -> UploadAbortResponseDTO:
+    """Abort an active multipart upload.
+
+    This endpoint cancels an unfinished multipart upload, removes any
+    temporary objects created during the upload process and updates the
+    dataset status accordingly.
 
     Args:
-        request: Validated upload abort request.
-        controller: Injected upload controller.
+        request: Validated upload abort payload.
+        controller: Configured upload controller.
 
     Returns:
-        Standardized upload abort response containing final statuses.
+        Standardized response containing the final upload and dataset
+        statuses.
     """
-    return controller.abort_upload(request)
+    return await controller.abort_upload(request)
