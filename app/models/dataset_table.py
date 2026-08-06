@@ -7,8 +7,6 @@ from sqlalchemy.dialects.postgresql import UUID
 from app.database.base import Base
 
 
-
-
 class DatasetStatus(enum.Enum):
     UPLOADING = "UPLOADING"
     COMPLETED = "COMPLETED"

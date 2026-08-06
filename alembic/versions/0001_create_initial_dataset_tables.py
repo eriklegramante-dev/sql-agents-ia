@@ -18,6 +18,10 @@ depends_on = None
 
 
 def upgrade() -> None:
+    op.execute(
+    'CREATE EXTENSION IF NOT EXISTS "pgcrypto"'
+    )    
+    
     dataset_status_enum = postgresql.ENUM(
         "UPLOADING",
         "COMPLETED",
@@ -130,6 +134,7 @@ def upgrade() -> None:
             postgresql.UUID(as_uuid=True),
             primary_key=True,
             nullable=False,
+            server_default=sa.text("gen_random_uuid()"),
         ),
         sa.Column(
             "dataset_id",
@@ -168,6 +173,7 @@ def upgrade() -> None:
             postgresql.UUID(as_uuid=True),
             primary_key=True,
             nullable=False,
+            server_default=sa.text("gen_random_uuid()"),
         ),
         sa.Column(
             "dataset_id",
