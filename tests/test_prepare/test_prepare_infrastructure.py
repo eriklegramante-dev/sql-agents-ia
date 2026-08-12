@@ -14,6 +14,9 @@ from app.routes.prepare.services.service import DatasetPreparationService
 from app.core.prepare.workflow import DatasetPreparationWorkflow
 from tests.helpers import DATASET_ID, NOW
 
+from uuid import UUID
+from datetime import datetime
+
 
 class FakeAcquireContext:
     def __init__(self, connection):
@@ -56,16 +59,25 @@ def make_dataset_row(**overrides):
     row = {
         "id": DATASET_ID,
         "name": "dataset.csv",
+        "filename": "dataset.csv",
         "status": DatasetStatus.COMPLETED.value,
         "raw_object_key": "uploads/input.csv",
         "prepared_object_key": None,
+        "user_id": UUID("22222222-2222-2222-2222-222222222222"),
+        "description": "Test dataset",
+        "file_type": "csv",
+        "content_type": "text/csv",
+        "file_size_bytes": 1024,
+        "current_upload_job_id": None,
         "rows_count": None,
         "columns_count": None,
         "error_message": None,
         "created_at": NOW,
         "updated_at": NOW,
     }
+
     row.update(overrides)
+
     return row
 
 

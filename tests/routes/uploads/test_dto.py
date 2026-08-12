@@ -56,10 +56,11 @@ def test_upload_abort_response_builds_successfully() -> None:
     assert response.success is True
     assert response.data.upload_status == "ABORTED"
     assert response.data.dataset_status == "ABORTED"
-
 def test_upload_complete_request_dto_accepts_valid_payload() -> None:
+    dataset_id = "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+
     request = UploadCompleteRequestDTO(
-        dataset_id="dataset-1",
+        dataset_id=dataset_id,
         upload_id="upload-1",
         parts=[
             {
@@ -69,25 +70,28 @@ def test_upload_complete_request_dto_accepts_valid_payload() -> None:
         ],
     )
 
-    assert request.dataset_id == "dataset-1"
+    assert str(request.dataset_id) == dataset_id
     assert request.upload_id == "upload-1"
     assert request.parts[0].part_number == 1
     assert request.parts[0].etag == "etag-1"
 
 
 def test_upload_complete_response_dto_accepts_valid_payload() -> None:
+    dataset_id = "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+
     response = UploadCompleteResponseDTO(
         success=True,
         message="Upload completed successfully.",
         data={
-            "dataset_id": "dataset-1",
+            "dataset_id": dataset_id,
             "upload_id": "upload-1",
             "status": "COMPLETED",
-            "object_key": "datasets/dataset-1/raw/file.csv",
+            "object_key": f"datasets/{dataset_id}/raw/file.csv",
             "completed_parts_count": 1,
         },
     )
 
     assert response.success is True
+    assert str(response.data.dataset_id) == dataset_id
     assert response.data.status == "COMPLETED"
     assert response.data.completed_parts_count == 1

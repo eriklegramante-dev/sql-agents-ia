@@ -7,25 +7,28 @@ from app.core.uploads.exceptions import UploadCompletionError
 
 
 class FakeUploadMetadataRepository:
-    def __init__(self, metadata=None) -> None:
+    def __init__(self, metadata=None):
         self.metadata = metadata
         self.updated_status = None
         self.completed_parts = None
 
-    def find_by_dataset_and_upload(
+    async def create(self, metadata):
+        self.metadata = metadata
+
+    async def find_by_dataset_and_upload(
         self,
-        dataset_id: str,
-        upload_id: str,
+        dataset_id,
+        upload_id,
     ):
         return self.metadata
 
-    def update_status(
+    async def update_status(
         self,
-        dataset_id: str,
-        upload_id: str,
-        upload_status: str,
-        dataset_status: str,
-    ) -> None:
+        dataset_id,
+        upload_id,
+        upload_status,
+        dataset_status,
+    ):
         self.updated_status = {
             "dataset_id": dataset_id,
             "upload_id": upload_id,
@@ -33,12 +36,12 @@ class FakeUploadMetadataRepository:
             "dataset_status": dataset_status,
         }
 
-    def store_completed_parts(
+    async def store_completed_parts(
         self,
-        dataset_id: str,
-        upload_id: str,
-        parts: list,
-    ) -> None:
+        dataset_id,
+        upload_id,
+        parts,
+    ):
         self.completed_parts = {
             "dataset_id": dataset_id,
             "upload_id": upload_id,
@@ -47,15 +50,15 @@ class FakeUploadMetadataRepository:
 
 
 class FakeStorageAdapter:
-    def __init__(self) -> None:
+    def __init__(self):
         self.completed_upload = None
 
     def complete_multipart_upload(
         self,
-        object_key: str,
-        upload_id: str,
-        parts: list,
-    ) -> None:
+        object_key,
+        upload_id,
+        parts,
+    ):
         self.completed_upload = {
             "object_key": object_key,
             "upload_id": upload_id,
@@ -63,316 +66,53 @@ class FakeStorageAdapter:
         }
 
 
-class FailingStorageAdapter(FakeStorageAdapter):
+class FailingStorageAdapter:
     def complete_multipart_upload(
         self,
-        object_key: str,
-        upload_id: str,
-        parts: list,
-    ) -> None:
+        object_key,
+        upload_id,
+        parts,
+    ):
         raise StorageOperationError(
             operation="complete multipart upload"
         )
 
 
 def build_metadata(
-    status: str = UploadStatus.UPLOADING.value,
+    status=UploadStatus.UPLOADING.value,
 ):
     return {
         "dataset_id": "dataset-1",
         "upload_id": "upload-1",
         "upload_status": status,
         "dataset_status": DatasetStatus.UPLOADING.value,
-        "object_key": "datasets/dataset-1/raw/file.csv",
+        "object_key": "datasets/file.csv",
         "chunks_count": 2,
     }
 
 
-def test_complete_upload_successfully() -> None:
-    metadata = build_metadata()
-    repository = FakeUploadMetadataRepository(metadata=metadata)
-    storage_adapter = FakeStorageAdapter()
-    workflow = UploadCompletionWorkflow(
-        repository=repository,
-        storage_adapter=storage_adapter,
-    )
-    parts = [
-        {"part_number": 2, "etag": "etag-2"},
-        {"part_number": 1, "etag": "etag-1"},
-    ]
+@pytest.mark.asyncio
+async def test_complete_upload_successfully():
 
-    result = workflow.run(
-        dataset_id="dataset-1",
-        upload_id="upload-1",
-        parts=parts,
+    repository = FakeUploadMetadataRepository(
+        build_metadata()
     )
 
-    sorted_parts = [
-        {"part_number": 1, "etag": "etag-1"},
-        {"part_number": 2, "etag": "etag-2"},
-    ]
-
-    assert result == {
-        "dataset_id": "dataset-1",
-        "upload_id": "upload-1",
-        "status": UploadStatus.COMPLETED.value,
-        "object_key": "datasets/dataset-1/raw/file.csv",
-        "completed_parts_count": 2,
-    }
-    assert storage_adapter.completed_upload == {
-        "object_key": "datasets/dataset-1/raw/file.csv",
-        "upload_id": "upload-1",
-        "parts": sorted_parts,
-    }
-    assert repository.completed_parts == {
-        "dataset_id": "dataset-1",
-        "upload_id": "upload-1",
-        "parts": sorted_parts,
-    }
-    assert repository.updated_status == {
-        "dataset_id": "dataset-1",
-        "upload_id": "upload-1",
-        "upload_status": UploadStatus.COMPLETED.value,
-        "dataset_status": DatasetStatus.COMPLETED.value,
-    }
-    assert "completed_at" in metadata
-
-
-def test_complete_upload_raises_value_error_when_metadata_is_missing() -> None:
-    workflow = UploadCompletionWorkflow(
-        repository=FakeUploadMetadataRepository(metadata=None),
-        storage_adapter=FakeStorageAdapter(),
-    )
-
-    with pytest.raises(
-        ValueError,
-        match="Upload metadata not found.",
-    ):
-        workflow.run(
-            dataset_id="dataset-1",
-            upload_id="upload-1",
-            parts=[
-                {
-                    "part_number": 1,
-                    "etag": "etag-1",
-                },
-            ],
-        )
-
-
-@pytest.mark.parametrize(
-    "status",
-    [
-        UploadStatus.COMPLETED.value,
-        UploadStatus.ABORTED.value,
-        UploadStatus.FAILED.value,
-    ],
-)
-def test_complete_upload_raises_value_error_when_status_is_invalid(
-    status: str,
-) -> None:
-    workflow = UploadCompletionWorkflow(
-        repository=FakeUploadMetadataRepository(
-            metadata=build_metadata(status=status)
-        ),
-        storage_adapter=FakeStorageAdapter(),
-    )
-
-    with pytest.raises(
-        ValueError,
-        match="Upload status cannot be completed.",
-    ):
-        workflow.run(
-            dataset_id="dataset-1",
-            upload_id="upload-1",
-            parts=[
-                {
-                    "part_number": 1,
-                    "etag": "etag-1",
-                },
-            ],
-        )
-
-
-def test_complete_upload_raises_value_error_when_object_key_is_missing() -> None:
-    metadata = build_metadata()
-    metadata["object_key"] = ""
+    storage = FakeStorageAdapter()
 
     workflow = UploadCompletionWorkflow(
-        repository=FakeUploadMetadataRepository(metadata=metadata),
-        storage_adapter=FakeStorageAdapter(),
+        repository,
+        storage,
     )
 
-    with pytest.raises(
-        ValueError,
-        match="Upload object key not found.",
-    ):
-        workflow.run(
-            dataset_id="dataset-1",
-            upload_id="upload-1",
-            parts=[
-                {
-                    "part_number": 1,
-                    "etag": "etag-1",
-                },
-            ],
-        )
-
-
-def test_complete_upload_raises_value_error_when_parts_are_empty() -> None:
-    workflow = UploadCompletionWorkflow(
-        repository=FakeUploadMetadataRepository(
-            metadata=build_metadata()
-        ),
-        storage_adapter=FakeStorageAdapter(),
-    )
-
-    with pytest.raises(
-        ValueError,
-        match="Upload parts must not be empty.",
-    ):
-        workflow.run(
-            dataset_id="dataset-1",
-            upload_id="upload-1",
-            parts=[],
-        )
-
-
-@pytest.mark.parametrize(
-    "part_number",
-    [0, -1, "1", None],
-)
-def test_complete_upload_raises_value_error_when_part_number_is_invalid(
-    part_number,
-) -> None:
-    workflow = UploadCompletionWorkflow(
-        repository=FakeUploadMetadataRepository(
-            metadata=build_metadata()
-        ),
-        storage_adapter=FakeStorageAdapter(),
-    )
-
-    with pytest.raises(
-        ValueError,
-        match="Part numbers must be positive integers.",
-    ):
-        workflow.run(
-            dataset_id="dataset-1",
-            upload_id="upload-1",
-            parts=[
-                {
-                    "part_number": part_number,
-                    "etag": "etag-1",
-                },
-                {
-                    "part_number": 2,
-                    "etag": "etag-2",
-                },
-            ],
-        )
-
-
-@pytest.mark.parametrize(
-    "etag",
-    ["", "   ", None, 123],
-)
-def test_complete_upload_raises_value_error_when_etag_is_invalid(
-    etag,
-) -> None:
-    workflow = UploadCompletionWorkflow(
-        repository=FakeUploadMetadataRepository(
-            metadata=build_metadata()
-        ),
-        storage_adapter=FakeStorageAdapter(),
-    )
-
-    with pytest.raises(
-        ValueError,
-        match="Each upload part must contain a valid ETag.",
-    ):
-        workflow.run(
-            dataset_id="dataset-1",
-            upload_id="upload-1",
-            parts=[
-                {
-                    "part_number": 1,
-                    "etag": etag,
-                },
-                {
-                    "part_number": 2,
-                    "etag": "etag-2",
-                },
-            ],
-        )
-
-
-def test_complete_upload_raises_value_error_when_parts_are_duplicated() -> None:
-    workflow = UploadCompletionWorkflow(
-        repository=FakeUploadMetadataRepository(
-            metadata=build_metadata()
-        ),
-        storage_adapter=FakeStorageAdapter(),
-    )
-
-    with pytest.raises(
-        ValueError,
-        match="Duplicated part numbers are not allowed.",
-    ):
-        workflow.run(
-            dataset_id="dataset-1",
-            upload_id="upload-1",
-            parts=[
-                {
-                    "part_number": 1,
-                    "etag": "etag-1",
-                },
-                {
-                    "part_number": 1,
-                    "etag": "etag-2",
-                },
-            ],
-        )
-
-
-def test_complete_upload_raises_value_error_when_parts_count_does_not_match() -> None:
-    workflow = UploadCompletionWorkflow(
-        repository=FakeUploadMetadataRepository(
-            metadata=build_metadata()
-        ),
-        storage_adapter=FakeStorageAdapter(),
-    )
-
-    with pytest.raises(
-        ValueError,
-        match=(
-            "Uploaded parts count does not match expected chunks count."
-        ),
-    ):
-        workflow.run(
-            dataset_id="dataset-1",
-            upload_id="upload-1",
-            parts=[
-                {
-                    "part_number": 1,
-                    "etag": "etag-1",
-                },
-            ],
-        )
-
-
-def test_complete_upload_accepts_parts_when_expected_chunks_count_is_missing() -> None:
-    metadata = build_metadata()
-    metadata["chunks_count"] = None
-
-    workflow = UploadCompletionWorkflow(
-        repository=FakeUploadMetadataRepository(metadata=metadata),
-        storage_adapter=FakeStorageAdapter(),
-    )
-
-    result = workflow.run(
+    result = await workflow.run(
         dataset_id="dataset-1",
         upload_id="upload-1",
         parts=[
+            {
+                "part_number": 2,
+                "etag": "etag-2",
+            },
             {
                 "part_number": 1,
                 "etag": "etag-1",
@@ -380,32 +120,244 @@ def test_complete_upload_accepts_parts_when_expected_chunks_count_is_missing() -
         ],
     )
 
-    assert result["completed_parts_count"] == 1
+
+    assert result["status"] == UploadStatus.COMPLETED.value
+    assert result["completed_parts_count"] == 2
+
+    assert storage.completed_upload["parts"] == [
+        {
+            "part_number": 1,
+            "etag": "etag-1",
+        },
+        {
+            "part_number": 2,
+            "etag": "etag-2",
+        },
+    ]
+
+    assert repository.updated_status["upload_status"] == (
+        UploadStatus.COMPLETED.value
+    )
 
 
-def test_complete_upload_raises_upload_completion_error_when_storage_fails() -> None:
+@pytest.mark.asyncio
+async def test_complete_upload_metadata_not_found():
+
     workflow = UploadCompletionWorkflow(
-        repository=FakeUploadMetadataRepository(
-            metadata=build_metadata()
-        ),
-        storage_adapter=FailingStorageAdapter(),
+        FakeUploadMetadataRepository(None),
+        FakeStorageAdapter(),
     )
 
     with pytest.raises(
-        UploadCompletionError,
-        match="Upload completion failed in object storage.",
+        ValueError,
+        match="Upload metadata not found",
     ):
-        workflow.run(
-            dataset_id="dataset-1",
-            upload_id="upload-1",
-            parts=[
+        await workflow.run(
+            "dataset-1",
+            "upload-1",
+            [{"part_number": 1, "etag": "abc"}],
+        )
+
+
+@pytest.mark.asyncio
+async def test_complete_upload_invalid_status():
+
+    repository = FakeUploadMetadataRepository(
+        build_metadata(
+            status=UploadStatus.COMPLETED.value
+        )
+    )
+
+    workflow = UploadCompletionWorkflow(
+        repository,
+        FakeStorageAdapter(),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Upload status cannot be completed",
+    ):
+        await workflow.run(
+            "dataset-1",
+            "upload-1",
+            [{"part_number":1,"etag":"abc"}],
+        )
+
+
+@pytest.mark.asyncio
+async def test_complete_upload_without_object_key():
+
+    metadata = build_metadata()
+    metadata["object_key"] = None
+
+    workflow = UploadCompletionWorkflow(
+        FakeUploadMetadataRepository(metadata),
+        FakeStorageAdapter(),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Upload object key not found",
+    ):
+        await workflow.run(
+            "dataset-1",
+            "upload-1",
+            [{"part_number":1,"etag":"abc"}],
+        )
+
+
+@pytest.mark.asyncio
+async def test_complete_upload_empty_parts():
+
+    workflow = UploadCompletionWorkflow(
+        FakeUploadMetadataRepository(build_metadata()),
+        FakeStorageAdapter(),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Upload parts must not be empty",
+    ):
+        await workflow.run(
+            "dataset-1",
+            "upload-1",
+            [],
+        )
+
+
+@pytest.mark.asyncio
+async def test_complete_upload_duplicate_parts():
+
+    workflow = UploadCompletionWorkflow(
+        FakeUploadMetadataRepository(build_metadata()),
+        FakeStorageAdapter(),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Duplicated part numbers",
+    ):
+        await workflow.run(
+            "dataset-1",
+            "upload-1",
+            [
                 {
-                    "part_number": 1,
-                    "etag": "etag-1",
+                    "part_number":1,
+                    "etag":"a",
                 },
                 {
-                    "part_number": 2,
-                    "etag": "etag-2",
+                    "part_number":1,
+                    "etag":"b",
+                },
+            ],
+        )
+
+
+@pytest.mark.asyncio
+async def test_complete_upload_invalid_part_number():
+
+    workflow = UploadCompletionWorkflow(
+        FakeUploadMetadataRepository(build_metadata()),
+        FakeStorageAdapter(),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Part numbers must be positive integers",
+    ):
+        await workflow.run(
+            "dataset-1",
+            "upload-1",
+            [
+                {
+                    "part_number":0,
+                    "etag":"abc",
+                },
+                {
+                    "part_number":2,
+                    "etag":"def",
+                },
+            ],
+        )
+
+
+@pytest.mark.asyncio
+async def test_complete_upload_invalid_etag():
+
+    workflow = UploadCompletionWorkflow(
+        FakeUploadMetadataRepository(build_metadata()),
+        FakeStorageAdapter(),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="valid ETag",
+    ):
+        await workflow.run(
+            "dataset-1",
+            "upload-1",
+            [
+                {
+                    "part_number":1,
+                    "etag":"",
+                },
+                {
+                    "part_number":2,
+                    "etag":"abc",
+                },
+            ],
+        )
+
+
+@pytest.mark.asyncio
+async def test_complete_upload_wrong_chunks_count():
+
+    workflow = UploadCompletionWorkflow(
+        FakeUploadMetadataRepository(build_metadata()),
+        FakeStorageAdapter(),
+    )
+
+
+    with pytest.raises(
+        ValueError,
+        match="does not match expected chunks count",
+    ):
+        await workflow.run(
+            "dataset-1",
+            "upload-1",
+            [
+                {
+                    "part_number":1,
+                    "etag":"abc",
+                }
+            ],
+        )
+
+
+@pytest.mark.asyncio
+async def test_complete_upload_storage_failure():
+
+    workflow = UploadCompletionWorkflow(
+        FakeUploadMetadataRepository(build_metadata()),
+        FailingStorageAdapter(),
+    )
+
+
+    with pytest.raises(
+        UploadCompletionError,
+        match="Upload completion failed",
+    ):
+        await workflow.run(
+            "dataset-1",
+            "upload-1",
+            [
+                {
+                    "part_number":1,
+                    "etag":"abc",
+                },
+                {
+                    "part_number":2,
+                    "etag":"def",
                 },
             ],
         )

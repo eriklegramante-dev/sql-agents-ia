@@ -8,6 +8,7 @@ from app.core.uploads.exceptions import UploadCompletionError
 from app.logs.setup_logger import LOGGER
 from app.repositories.upload_metadata_repository import UploadMetadataRepository
 
+from uuid import UUID
 
 class UploadCompletionWorkflow:
     """Workflow responsible for completing multipart uploads.
@@ -35,9 +36,9 @@ class UploadCompletionWorkflow:
         self.repository = repository
         self.storage_adapter = storage_adapter
 
-    def run(
+    async def run(
         self,
-        dataset_id: str,
+        dataset_id: UUID,
         upload_id: str,
         parts: list[dict[str, Any]],
     ) -> dict[str, Any]:
@@ -52,12 +53,14 @@ class UploadCompletionWorkflow:
             Upload completion result containing final upload metadata.
 
         Raises:
-            ValueError: If metadata, upload status, object key, or parts are invalid.
-            UploadCompletionError: If object storage cannot complete the upload.
+            ValueError:
+                If metadata, upload status, object key, or parts are invalid.
+            UploadCompletionError:
+                If object storage cannot complete the upload.
         """
         LOGGER.log_info("[upload:complete:workflow] Starting upload completion")
 
-        metadata = self.repository.find_by_dataset_and_upload(
+        metadata = await self.repository.find_by_dataset_and_upload(
             dataset_id=dataset_id,
             upload_id=upload_id,
         )
@@ -68,7 +71,7 @@ class UploadCompletionWorkflow:
                 f"dataset_id={dataset_id}, upload_id={upload_id}"
             )
             raise ValueError("Upload metadata not found.")
-
+        
         current_status = metadata.get("upload_status")
 
         if current_status != UploadStatus.UPLOADING.value:
@@ -94,21 +97,24 @@ class UploadCompletionWorkflow:
                 upload_id=upload_id,
                 parts=sorted_parts,
             )
+
         except StorageOperationError as exc:
             LOGGER.log_error(
                 "[upload:complete:workflow] Storage completion failed: "
                 f"dataset_id={dataset_id}, upload_id={upload_id}, error={exc}"
             )
+
             raise UploadCompletionError(
                 "Upload completion failed in object storage."
             ) from exc
 
-        self.repository.store_completed_parts(
+        await self.repository.store_completed_parts(
             dataset_id=dataset_id,
             upload_id=upload_id,
             parts=sorted_parts,
         )
-        self.repository.update_status(
+
+        await self.repository.update_status(
             dataset_id=dataset_id,
             upload_id=upload_id,
             upload_status=UploadStatus.COMPLETED.value,
@@ -117,7 +123,9 @@ class UploadCompletionWorkflow:
 
         metadata["completed_at"] = datetime.now(timezone.utc).isoformat()
 
-        LOGGER.log_info("[upload:complete:workflow] Upload completed successfully")
+        LOGGER.log_info(
+            "[upload:complete:workflow] Upload completed successfully"
+        )
 
         return {
             "dataset_id": dataset_id,
@@ -142,7 +150,8 @@ class UploadCompletionWorkflow:
             Multipart parts sorted by part number.
 
         Raises:
-            ValueError: If parts are empty, duplicated, invalid, or incomplete.
+            ValueError:
+                If parts are empty, duplicated, invalid, or incomplete.
         """
         if not parts:
             raise ValueError("Upload parts must not be empty.")

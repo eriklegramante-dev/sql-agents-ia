@@ -11,6 +11,7 @@ from app.routes.profiling.route import router as profiling_router
 from app.routes.preview.route import router as preview_router
 from app.routes.chat.route import router as chat_router
 
+from app.routes.datasets.route import router as datasets_router
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -38,7 +39,12 @@ api_router.include_router(
 
 api_router.include_router(
     profiling_router,
-    tags=["Profiling"],
+    tags=["Profiling"]
+)
+
+api_router.include_router(
+    datasets_router,
+    tags=["Datasets"],
 )
 
 api_router.include_router(

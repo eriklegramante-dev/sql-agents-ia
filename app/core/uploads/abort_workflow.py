@@ -38,7 +38,11 @@ class UploadAbortWorkflow:
             UploadStatus.FAILED.value,
         }
 
-    def run(self, dataset_id: str, upload_id: str) -> dict[str, Any]:
+    async def run(
+        self,
+        dataset_id: str,
+        upload_id: str,
+    ) -> dict[str, Any]:
         """Run the upload abort orchestration.
 
         Args:
@@ -54,7 +58,7 @@ class UploadAbortWorkflow:
         """
         LOGGER.log_info("[upload:abort:workflow] Starting upload abort")
 
-        metadata = self.repository.find_by_dataset_and_upload(
+        metadata = await self.repository.find_by_dataset_and_upload(
             dataset_id=dataset_id,
             upload_id=upload_id,
         )
@@ -83,7 +87,7 @@ class UploadAbortWorkflow:
                 "dataset_id": dataset_id,
                 "upload_id": upload_id,
                 "upload_status": UploadStatus.ABORTED.value,
-                "dataset_status": DatasetStatus.ABORTED.value,
+                "dataset_status": DatasetStatus.FAILED.value,
             }
 
         if current_status not in self.cancelable_statuses:
@@ -94,6 +98,7 @@ class UploadAbortWorkflow:
             raise ValueError("Upload status cannot be aborted.")
 
         object_key = metadata.get("object_key")
+
         if not object_key:
             raise ValueError("Upload object key not found.")
 
@@ -102,32 +107,39 @@ class UploadAbortWorkflow:
                 object_key=object_key,
                 upload_id=upload_id,
             )
+
             self.storage_adapter.cleanup_temporary_parts(
                 object_key=object_key,
                 upload_id=upload_id,
             )
+
         except Exception as exc:
             LOGGER.log_error(
                 "[upload:abort:workflow] Storage abort failed: "
                 f"dataset_id={dataset_id}, upload_id={upload_id}, error={exc}"
             )
-            raise RuntimeError("Upload storage abort failed.") from exc
 
-        self.repository.update_status(
+            raise RuntimeError(
+                "Upload storage abort failed."
+            ) from exc
+
+        await self.repository.update_status(
             dataset_id=dataset_id,
             upload_id=upload_id,
             upload_status=UploadStatus.ABORTED.value,
-            dataset_status=DatasetStatus.ABORTED.value,
+            dataset_status=DatasetStatus.FAILED.value,
         )
 
         metadata["aborted_at"] = datetime.now(timezone.utc).isoformat()
         metadata["abort_reason"] = "User requested upload abort."
 
-        LOGGER.log_info("[upload:abort:workflow] Upload aborted successfully")
+        LOGGER.log_info(
+            "[upload:abort:workflow] Upload aborted successfully"
+        )
 
         return {
             "dataset_id": dataset_id,
             "upload_id": upload_id,
             "upload_status": UploadStatus.ABORTED.value,
-            "dataset_status": DatasetStatus.ABORTED.value,
+            "dataset_status": DatasetStatus.FAILED.value,
         }
