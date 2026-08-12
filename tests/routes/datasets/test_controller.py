@@ -2,7 +2,6 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 import pytest
-from fastapi import HTTPException
 
 from app.prepare.exceptions import NotFoundException
 from app.routes.datasets.controllers.controller import DatasetController
@@ -10,7 +9,6 @@ from app.routes.datasets.dtos.dto import DatasetResponseDataDTO
 
 
 class FakeDatasetService:
-
     def __init__(self):
         self.error = None
         self.received_dataset_id = None
@@ -39,7 +37,6 @@ class FakeDatasetService:
 
 @pytest.mark.asyncio
 async def test_get_dataset_returns_success_response():
-
     service = FakeDatasetService()
 
     controller = DatasetController(
@@ -52,23 +49,22 @@ async def test_get_dataset_returns_success_response():
         dataset_id=dataset_id,
     )
 
-    assert response["success"] is True
-    assert response["message"] == "Dataset retrieved successfully."
+    assert response.success is True
 
     assert (
-        UUID(response["data"]["dataset_id"])
-        == dataset_id
+        response.message
+        == "Dataset retrieved successfully."
     )
 
-    assert (
-        service.received_dataset_id
-        == dataset_id
-    )
+    assert response.data is not None
+
+    assert response.data.dataset_id == dataset_id
+
+    assert service.received_dataset_id == dataset_id
 
 
 @pytest.mark.asyncio
-async def test_get_dataset_returns_not_found_http_exception():
-
+async def test_get_dataset_propagates_not_found_exception():
     service = FakeDatasetService()
 
     service.error = NotFoundException(
@@ -79,38 +75,9 @@ async def test_get_dataset_returns_not_found_http_exception():
         service=service,
     )
 
-    with pytest.raises(HTTPException) as exc:
-
+    with pytest.raises(NotFoundException) as exc:
         await controller.get_dataset(
             dataset_id=uuid4(),
         )
 
-    assert exc.value.status_code == 404
-
-    assert (
-        exc.value.detail["success"]
-        is False
-    )
-
-    assert (
-        exc.value.detail["message"]
-        == "Dataset not found."
-    )
-
-
-@pytest.mark.asyncio
-async def test_get_dataset_returns_validation_error():
-
-    service = FakeDatasetService()
-
-    controller = DatasetController(
-        service=service,
-    )
-
-    with pytest.raises(HTTPException) as exc:
-
-        await controller.get_dataset(
-            dataset_id="invalid-uuid",
-        )
-
-    assert exc.value.status_code == 422
+    assert str(exc.value) == "Dataset not found."

@@ -7,6 +7,7 @@ from app.enums.dataset_status import DatasetStatus
 from app.models.dataset_schema_table import ColumnSchema
 from app.models.dataset_table import DatasetTable
 
+from app.core.datasets.models import DatasetMetadata
 
 class DatasetRepository(BaseRepository[DatasetTable]):
     """
@@ -182,6 +183,64 @@ class DatasetRepository(BaseRepository[DatasetTable]):
 
         return self._build_dataset(row)
 
+    async def get_metadata_by_id(
+        self,
+        dataset_id: UUID,
+    ) -> DatasetMetadata | None:
+        """
+        Retrieve dataset metadata using the domain model.
+
+        This method adapts the persistence model into the domain model required
+        by the dataset core layer, keeping database-specific models isolated from
+        dataset workflows.
+
+        Args:
+            dataset_id:
+                Unique identifier of the dataset.
+
+        Returns:
+            DatasetMetadata:
+                Domain dataset metadata when the dataset exists.
+
+            None:
+                If the dataset does not exist.
+        """
+        async with self.pool.acquire() as connection:
+            row = await connection.fetchrow(
+                """
+                SELECT
+                    id,
+                    name,
+                    filename,
+                    status,
+                    raw_object_key,
+                    description,
+                    content_type,
+                    file_size_bytes,
+                    created_at,
+                    updated_at
+                FROM datasets
+                WHERE id = $1
+                """,
+                dataset_id,
+            )
+
+        if row is None:
+            return None
+
+        return DatasetMetadata(
+            dataset_id=row["id"],
+            name=row["name"],
+            original_filename=row["filename"],
+            content_type=row["content_type"],
+            file_size_bytes=row["file_size_bytes"],
+            status=DatasetStatus(row["status"]).value,
+            object_key=row["raw_object_key"],
+            description=row["description"],
+            created_at=row["created_at"],
+            updated_at=row["updated_at"],
+        )
+    
     async def find_by_upload(
         self,
         dataset_id: UUID,

@@ -8,7 +8,6 @@ from app.routes.datasets.dependencies.dependence import (
 
 
 class FakeDatasetController:
-
     async def get_dataset(
         self,
         dataset_id: UUID,
@@ -34,7 +33,6 @@ class FakeDatasetController:
 
 
 def test_get_dataset_route_success(client):
-
     app.dependency_overrides[
         get_dataset_controller
     ] = lambda: FakeDatasetController()
@@ -42,13 +40,10 @@ def test_get_dataset_route_success(client):
     dataset_id = uuid4()
 
     try:
-
         response = client.get(
             f"/api/v1/datasets/{dataset_id}"
         )
-
     finally:
-
         app.dependency_overrides.clear()
 
     assert response.status_code == 200
@@ -74,50 +69,15 @@ def test_get_dataset_route_success(client):
 
 
 def test_get_dataset_route_rejects_invalid_uuid(client):
-
-    response = client.get(
-        "/api/v1/datasets/invalid-uuid"
-    )
-
-    assert response.status_code == 422
-
-
-def test_get_dataset_route_returns_internal_server_error(client):
-
-    class FakeController:
-
-        async def get_dataset(
-            self,
-            dataset_id,
-        ):
-            raise Exception(
-                "Unexpected failure"
-            )
-
     app.dependency_overrides[
         get_dataset_controller
-    ] = lambda: FakeController()
+    ] = lambda: FakeDatasetController()
 
     try:
-
         response = client.get(
-            f"/api/v1/datasets/{uuid4()}"
+            "/api/v1/datasets/invalid-uuid"
         )
-
     finally:
-
         app.dependency_overrides.clear()
 
-    assert response.status_code == 500
-
-    body = response.json()
-
-    assert (
-        body["detail"]["success"]
-        is False
-    )
-
-    assert (
-        body["detail"]["message"]
-        == "Internal server error."
-    )
+    assert response.status_code == 422

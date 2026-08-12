@@ -1,18 +1,11 @@
+from typing import Annotated
 from uuid import UUID
 
-from fastapi import (
-    APIRouter,
-    Depends,
-    HTTPException,
-    Path,
-    status,
-)
+from fastapi import APIRouter, Depends, HTTPException, Path, status
 
 from app.prepare.exceptions import AppException
 from app.routes.datasets.controllers.controller import DatasetController
-from app.routes.datasets.dependencies.dependence import (
-    get_dataset_controller,
-)
+from app.routes.datasets.dependencies.dependence import get_dataset_controller
 from app.routes.datasets.dtos.dto import DatasetResponseDTO
 
 router = APIRouter(
@@ -27,14 +20,17 @@ router = APIRouter(
     status_code=status.HTTP_200_OK,
 )
 async def get_dataset(
-    dataset_id: UUID = Path(
-        ...,
-        description="Unique identifier of the dataset.",
-    ),
-    controller: DatasetController = Depends(
-        get_dataset_controller,
-    ),
-):
+    dataset_id: Annotated[
+        UUID,
+        Path(
+            description="Unique identifier of the dataset.",
+        ),
+    ],
+    controller: Annotated[
+        DatasetController,
+        Depends(get_dataset_controller),
+    ],
+) -> DatasetResponseDTO:
     """Retrieve dataset metadata.
 
     Args:
@@ -46,7 +42,7 @@ async def get_dataset(
 
     Raises:
         HTTPException:
-            If validation or dataset retrieval fails.
+            If dataset retrieval fails with an expected application error.
     """
     try:
         return await controller.get_dataset(
@@ -62,18 +58,4 @@ async def get_dataset(
                 "data": None,
                 "errors": error.details,
             },
-        )
-
-    except HTTPException:
-        raise
-
-    except Exception as error:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={
-                "success": False,
-                "message": "Internal server error.",
-                "data": None,
-                "errors": [str(error)],
-            },
-        )
+        ) from error

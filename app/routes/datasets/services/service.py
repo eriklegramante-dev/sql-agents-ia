@@ -1,4 +1,3 @@
-from typing import Optional
 from uuid import UUID
 
 from app.core.datasets.workflow import DatasetWorkflow
@@ -20,8 +19,8 @@ class DatasetService:
 
     def __init__(
         self,
-        workflow: Optional[DatasetWorkflow] = None,
-        logger: Optional[LoggerManager] = None,
+        workflow: DatasetWorkflow,
+        logger: LoggerManager | None = None,
     ) -> None:
         """Initialize the dataset service.
 
@@ -30,7 +29,7 @@ class DatasetService:
             logger: Logger used to register service execution events.
         """
         self.logger = logger or LOGGER
-        self.workflow = workflow or DatasetWorkflow()
+        self.workflow = workflow
 
     async def get_dataset(
         self,
