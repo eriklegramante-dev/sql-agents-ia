@@ -1,13 +1,13 @@
 import json
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
+from app.core.datasets.models import DatasetMetadata
 from app.database.repository import BaseRepository
 from app.enums.dataset_status import DatasetStatus
 from app.models.dataset_schema_table import ColumnSchema
 from app.models.dataset_table import DatasetTable
 
-from app.core.datasets.models import DatasetMetadata
 
 class DatasetRepository(BaseRepository[DatasetTable]):
     """
@@ -136,7 +136,7 @@ class DatasetRepository(BaseRepository[DatasetTable]):
     async def get_by_id(
         self,
         dataset_id: UUID,
-    ) -> Optional[DatasetTable]:
+    ) -> DatasetTable | None:
         """
         Retrieve dataset metadata by its unique identifier.
 
@@ -240,12 +240,12 @@ class DatasetRepository(BaseRepository[DatasetTable]):
             created_at=row["created_at"],
             updated_at=row["updated_at"],
         )
-    
+
     async def find_by_upload(
         self,
         dataset_id: UUID,
         upload_id: str,
-    ) -> Optional[DatasetTable]:
+    ) -> DatasetTable | None:
         """
         Retrieve dataset metadata associated with an active multipart upload.
 
@@ -346,7 +346,7 @@ class DatasetRepository(BaseRepository[DatasetTable]):
         self,
         dataset_id: UUID,
         status: DatasetStatus,
-        error_message: Optional[str] = None,
+        error_message: str | None = None,
     ) -> bool:
         """
         Update the processing status of a dataset.
@@ -386,7 +386,7 @@ class DatasetRepository(BaseRepository[DatasetTable]):
         prepared_object_key: str,
         rows_count: int,
         columns_count: int,
-    ) -> Optional[DatasetTable]:
+    ) -> DatasetTable | None:
         """
         Persist metadata generated after successful dataset preparation.
 
@@ -492,7 +492,7 @@ class DatasetRepository(BaseRepository[DatasetTable]):
     async def get_schema(
         self,
         dataset_id: UUID,
-    ) -> Optional[list[ColumnSchema]]:
+    ) -> list[ColumnSchema] | None:
         """
         Retrieve the persisted schema associated with a dataset.
 
@@ -572,3 +572,40 @@ class DatasetRepository(BaseRepository[DatasetTable]):
             )
 
         return result in ("INSERT 0 1", "UPDATE 1")
+
+    async def delete_related_records(
+        self,
+        dataset_id: UUID,
+    ) -> bool:
+        """
+        Delete records related to a dataset.
+
+        The dataset metadata itself is preserved so the soft-delete behavior
+        can keep the dataset record with DELETED status.
+
+        Args:
+            dataset_id:
+                Unique identifier of the dataset.
+
+        Returns:
+            bool:
+                True when the related records were deleted successfully.
+        """
+        async with self.pool.acquire() as connection, connection.transaction():
+            await connection.execute(
+                """
+                    DELETE FROM dataset_schemas
+                    WHERE dataset_id = $1
+                    """,
+                dataset_id,
+            )
+
+            await connection.execute(
+                """
+                    DELETE FROM dataset_profiles
+                    WHERE dataset_id = $1
+                    """,
+                dataset_id,
+            )
+
+        return True
