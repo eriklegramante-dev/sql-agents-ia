@@ -6,7 +6,7 @@ from app.adapters.storage.exceptions import StorageOperationError
 from app.core.datasets.models import DatasetMetadata
 from app.core.datasets.repository import DatasetRepository
 from app.enums.dataset_status import DatasetStatus
-from app.logs.setup_logger import LOGGER, LoggerManager
+from app.logs.setup_logger import LoggerManager
 from app.prepare.exceptions import NotFoundException
 
 
@@ -43,20 +43,24 @@ class DatasetDeletionWorkflow:
         dataset_repository: DatasetRepository,
         storage: StorageAdapter,
         raw_container: str,
-        logger: LoggerManager | None = None,
+        logger: LoggerManager,
     ) -> None:
         """Initialize the dataset deletion workflow dependencies.
 
         Args:
-            dataset_repository: Repository used to retrieve and update datasets.
-            storage: Storage adapter used to remove dataset files.
-            raw_container: Logical container containing raw dataset objects.
-            logger: Optional logger used to register workflow events.
+            dataset_repository:
+                Repository used to retrieve and update datasets.
+            storage:
+                Storage adapter used to remove dataset files.
+            raw_container:
+                Logical container containing raw dataset objects.
+            logger:
+                Logger injected by the application composition layer.
         """
         self.repository = dataset_repository
         self.storage = storage
         self.raw_container = raw_container
-        self.logger = logger or LOGGER
+        self.logger = logger
 
     async def execute(
         self,
@@ -65,7 +69,8 @@ class DatasetDeletionWorkflow:
         """Soft-delete a dataset and clean its related resources.
 
         Args:
-            dataset_id: Unique identifier of the dataset to delete.
+            dataset_id:
+                Unique identifier of the dataset to delete.
 
         Returns:
             Final dataset metadata and whether it had already been deleted.
@@ -76,6 +81,8 @@ class DatasetDeletionWorkflow:
                 be persisted.
             StorageOperationError:
                 If the raw dataset object cannot be removed from storage.
+            DatasetRelatedRecordsDeletionException:
+                If persistence cleanup for related records fails.
         """
         self.logger.log_info(
             f"[dataset:delete:workflow] Starting deletion for {dataset_id}"
@@ -140,7 +147,8 @@ class DatasetDeletionWorkflow:
         """Remove the dataset raw object and handle storage failures.
 
         Args:
-            dataset: Dataset metadata containing the object key to remove.
+            dataset:
+                Dataset metadata containing the object key to remove.
 
         Raises:
             StorageOperationError:

@@ -51,15 +51,16 @@ class DatasetRepository(Protocol):
     async def delete_related_records(
         self,
         dataset_id: UUID,
-    ) -> bool:
-        """Delete records related to a dataset.
+    ) -> None:
+        """Remove persistence records associated with a dataset.
 
         Args:
             dataset_id:
                 Unique identifier of the dataset whose related records
                 should be removed.
 
-        Returns:
-            True when the related records were successfully removed.
+        Raises:
+            DatasetRelatedRecordsDeletionException:
+                If the related-record cleanup cannot be completed.
         """
         ...

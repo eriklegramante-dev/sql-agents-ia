@@ -1,7 +1,11 @@
 from uuid import UUID
 
+import asyncpg
 import pytest
 
+from app.core.datasets.exceptions import (
+    DatasetRelatedRecordsDeletionException,
+)
 from app.database.dataset_repository import DatasetRepository
 
 
@@ -9,7 +13,6 @@ class FakeTransaction:
     """Fake async transaction used by dataset repository tests."""
 
     async def __aenter__(self):
-        """Enter the fake transaction context."""
         return self
 
     async def __aexit__(
@@ -18,17 +21,20 @@ class FakeTransaction:
         exc,
         traceback,
     ) -> None:
-        """Exit the fake transaction context."""
+        return None
 
 
 class FakeConnection:
     """Fake database connection used to record executed SQL statements."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        fail: bool = False,
+    ) -> None:
         self.executions: list[tuple[str, UUID]] = []
+        self.fail = fail
 
     def transaction(self) -> FakeTransaction:
-        """Return a fake transaction context manager."""
         return FakeTransaction()
 
     async def execute(
@@ -36,7 +42,9 @@ class FakeConnection:
         query: str,
         dataset_id: UUID,
     ) -> str:
-        """Record the SQL statement and dataset identifier."""
+        if self.fail:
+            raise asyncpg.PostgresError("Database cleanup failed.")
+
         self.executions.append(
             (
                 query,
@@ -57,7 +65,6 @@ class FakeAcquireContext:
         self.connection = connection
 
     async def __aenter__(self) -> FakeConnection:
-        """Return the configured fake connection."""
         return self.connection
 
     async def __aexit__(
@@ -66,17 +73,21 @@ class FakeAcquireContext:
         exc,
         traceback,
     ) -> None:
-        """Exit the fake connection context."""
+        return None
 
 
 class FakePool:
     """Fake asyncpg pool used by dataset repository tests."""
 
-    def __init__(self) -> None:
-        self.connection = FakeConnection()
+    def __init__(
+        self,
+        fail: bool = False,
+    ) -> None:
+        self.connection = FakeConnection(
+            fail=fail,
+        )
 
     def acquire(self) -> FakeAcquireContext:
-        """Return a fake connection acquisition context."""
         return FakeAcquireContext(
             connection=self.connection,
         )
@@ -97,7 +108,7 @@ async def test_delete_related_records_removes_schema_and_profile():
         dataset_id=dataset_id,
     )
 
-    assert result is True
+    assert result is None
     assert len(pool.connection.executions) == 2
 
     schema_query, schema_dataset_id = pool.connection.executions[0]
@@ -134,3 +145,26 @@ async def test_delete_related_records_uses_same_dataset_id_for_both_deletes():
         dataset_id,
         dataset_id,
     ]
+
+
+@pytest.mark.asyncio
+async def test_delete_related_records_wraps_database_failure():
+    """Raise a domain exception when PostgreSQL cleanup fails."""
+    pool = FakePool(
+        fail=True,
+    )
+
+    repository = DatasetRepository(
+        pool=pool,
+    )
+
+    dataset_id = UUID("33333333-3333-3333-3333-333333333333")
+
+    with pytest.raises(DatasetRelatedRecordsDeletionException) as exc:
+        await repository.delete_related_records(
+            dataset_id=dataset_id,
+        )
+
+    assert str(exc.value) == (
+        f"Failed to delete related records for dataset {dataset_id}."
+    )

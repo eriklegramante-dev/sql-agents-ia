@@ -2,6 +2,11 @@ import json
 from typing import Any
 from uuid import UUID
 
+import asyncpg
+
+from app.core.datasets.exceptions import (
+    DatasetRelatedRecordsDeletionException,
+)
 from app.core.datasets.models import DatasetMetadata
 from app.database.repository import BaseRepository
 from app.enums.dataset_status import DatasetStatus
@@ -576,36 +581,42 @@ class DatasetRepository(BaseRepository[DatasetTable]):
     async def delete_related_records(
         self,
         dataset_id: UUID,
-    ) -> bool:
-        """
-        Delete records related to a dataset.
+    ) -> None:
+        """Remove persistence records related to a dataset.
 
-        The dataset metadata itself is preserved so the soft-delete behavior
-        can keep the dataset record with DELETED status.
+        Both delete operations run inside the same PostgreSQL transaction.
+        The dataset metadata itself is preserved for soft-delete tracking.
 
         Args:
             dataset_id:
                 Unique identifier of the dataset.
 
-        Returns:
-            bool:
-                True when the related records were deleted successfully.
+        Raises:
+            DatasetRelatedRecordsDeletionException:
+                If PostgreSQL cannot complete the related-record cleanup.
         """
-        async with self.pool.acquire() as connection, connection.transaction():
-            await connection.execute(
-                """
+        try:
+            async with (
+                self.pool.acquire() as connection,
+                connection.transaction(),
+            ):
+                await connection.execute(
+                    """
                     DELETE FROM dataset_schemas
                     WHERE dataset_id = $1
                     """,
-                dataset_id,
-            )
+                    dataset_id,
+                )
 
-            await connection.execute(
-                """
+                await connection.execute(
+                    """
                     DELETE FROM dataset_profiles
                     WHERE dataset_id = $1
                     """,
-                dataset_id,
-            )
+                    dataset_id,
+                )
 
-        return True
+        except asyncpg.PostgresError as error:
+            raise DatasetRelatedRecordsDeletionException(
+                dataset_id=dataset_id,
+            ) from error
