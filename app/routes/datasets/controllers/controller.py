@@ -1,20 +1,28 @@
 from uuid import UUID
 
 from app.logs.setup_logger import LOGGER, LoggerManager
-from app.routes.datasets.dtos.dto import DatasetResponseDTO
+from app.routes.datasets.dtos.dto import (
+    DatasetDeleteResponseDataDTO,
+    DatasetDeleteResponseDTO,
+    DatasetResponseDTO,
+)
 from app.routes.datasets.services.service import DatasetService
 
 
 class DatasetController:
-    """Controller responsible for handling dataset retrieval requests.
+    """Controller responsible for handling dataset API requests.
+
+    Coordinates dataset retrieval and deletion requests by delegating
+    application processing to the dataset service and building the
+    standardized response DTOs returned by the route layer.
 
     Attributes:
-        service: Service responsible for executing dataset retrieval use cases.
+        service: Service responsible for dataset use cases.
         logger: Logger used to record controller execution events.
 
     Args:
         service: Configured dataset service used by this controller.
-        logger: Logger instance used by this controller.
+        logger: Optional logger instance used by the controller.
     """
 
     def __init__(
@@ -25,8 +33,8 @@ class DatasetController:
         """Initialize the dataset controller.
 
         Args:
-            service: Dataset service used to process requests.
-            logger: Logger used to register controller execution events.
+            service: Dataset service used to process dataset requests.
+            logger: Optional logger used to register controller events.
         """
         self.service = service
         self.logger = logger or LOGGER
@@ -35,17 +43,13 @@ class DatasetController:
         self,
         dataset_id: UUID,
     ) -> DatasetResponseDTO:
-        """Handle the dataset retrieval request.
+        """Handle a dataset metadata retrieval request.
 
         Args:
-            dataset_id: Unique identifier of the dataset.
+            dataset_id: Unique identifier of the dataset to retrieve.
 
         Returns:
-            Standardized response containing the dataset metadata.
-
-        Raises:
-            AppException:
-                If the dataset cannot be retrieved.
+            Standardized response containing the retrieved dataset metadata.
         """
         self.logger.log_info(
             "[dataset:get:controller] Received dataset retrieval request"
@@ -63,6 +67,54 @@ class DatasetController:
 
         self.logger.log_info(
             "[dataset:get:controller] Dataset retrieval response created"
+        )
+
+        return response
+
+    async def delete_dataset(
+        self,
+        dataset_id: UUID,
+    ) -> DatasetDeleteResponseDTO:
+        """Handle a dataset deletion request.
+
+        Delegates the deletion operation to the dataset service and builds
+        the response with the dataset final deletion state.
+
+        Args:
+            dataset_id: Unique identifier of the dataset to delete.
+
+        Returns:
+            Standardized response containing the dataset identifier,
+            final status, and update timestamp.
+        """
+        self.logger.log_info(
+            "[dataset:delete:controller] Received dataset deletion request"
+        )
+
+        result = await self.service.delete_dataset(
+            dataset_id=dataset_id,
+        )
+
+        message = (
+            "Dataset was already deleted."
+            if result.already_deleted
+            else "Dataset deleted successfully."
+        )
+
+        response_data = DatasetDeleteResponseDataDTO(
+            dataset_id=result.dataset.dataset_id,
+            status=result.dataset.status,
+            updated_at=result.dataset.updated_at,
+        )
+
+        response = DatasetDeleteResponseDTO(
+            success=True,
+            message=message,
+            data=response_data,
+        )
+
+        self.logger.log_info(
+            "[dataset:delete:controller] Dataset deletion response created"
         )
 
         return response
