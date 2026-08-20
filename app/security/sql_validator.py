@@ -7,6 +7,21 @@ FORBIDDEN_SQL_PATTERNS = re.compile(
 
 
 def validate_read_only_select(sql: str) -> None:
+    """
+    Validates that a given SQL query is strictly a read-only analytical statement.
+
+    Ensures that the statement starts with SELECT or WITH and does not contain
+    any forbidden data mutation or administrative operation keywords.
+
+    Args:
+        sql:
+            SQL statement string to validate.
+
+    Raises:
+        ValueError:
+            If the query does not begin with an analytical SELECT/WITH statement
+            or contains forbidden SQL keywords.
+    """
     cleaned = sql.strip().rstrip(";")
     if not cleaned.upper().startswith("SELECT") and not cleaned.upper().startswith("WITH"):
         raise ValueError("Only analytical SELECT queries are allowed.")

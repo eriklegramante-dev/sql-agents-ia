@@ -15,11 +15,35 @@ router = APIRouter(prefix="/analysis", tags=["Analysis"])
     status_code=status.HTTP_200_OK,
     dependencies=[Depends(verify_signature)],
 )
-def generate_chart(
+async def generate_chart(
     payload: AnalysisChartRequestDTO,
     controller: AnalysisController = Depends(),
 ) -> AnalysisChartResponseDTO:
-    response = controller.generate_chart(payload)
+    """
+    Generates a simple chart specification for a prepared dataset.
+
+    Executes read-only analytical SQL or plans a query based on a
+    natural-language question, validating dataset status, chart type, and SQL
+    safety before returning a frontend-ready chart specification.
+
+    Args:
+        payload:
+            Request payload containing dataset identifier, chart configuration,
+            or natural-language question.
+        controller:
+            Injected controller responsible for delegating chart generation.
+
+    Returns:
+        AnalysisChartResponseDTO:
+            Standardized response containing executed SQL, chart specification,
+            and data rows.
+
+    Raises:
+        HTTPException:
+            Returns a 400 Bad Request status code if validation fails, the
+            dataset is not prepared/profiled, or unsafe SQL is provided.
+    """
+    response = await controller.generate_chart(payload)
     if not response.success:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
