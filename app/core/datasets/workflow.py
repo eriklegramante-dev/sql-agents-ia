@@ -65,13 +65,9 @@ class DatasetWorkflow:
         )
 
         if dataset is None:
-            raise NotFoundException(
-                f"Dataset with ID {dataset_id} not found."
-            )
+            raise NotFoundException(f"Dataset with ID {dataset_id} not found.")
 
-        self.logger.log_info(
-            "[dataset:get:workflow] Dataset metadata found"
-        )
+        self.logger.log_info("[dataset:get:workflow] Dataset metadata found")
 
         self.logger.log_info(
             "[dataset:get:workflow] Dataset metadata retrieval completed"

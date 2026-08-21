@@ -119,9 +119,7 @@ class UploadAbortWorkflow:
                 f"dataset_id={dataset_id}, upload_id={upload_id}, error={exc}"
             )
 
-            raise RuntimeError(
-                "Upload storage abort failed."
-            ) from exc
+            raise RuntimeError("Upload storage abort failed.") from exc
 
         await self.repository.update_status(
             dataset_id=dataset_id,
@@ -133,9 +131,7 @@ class UploadAbortWorkflow:
         metadata["aborted_at"] = datetime.now(timezone.utc).isoformat()
         metadata["abort_reason"] = "User requested upload abort."
 
-        LOGGER.log_info(
-            "[upload:abort:workflow] Upload aborted successfully"
-        )
+        LOGGER.log_info("[upload:abort:workflow] Upload aborted successfully")
 
         return {
             "dataset_id": dataset_id,

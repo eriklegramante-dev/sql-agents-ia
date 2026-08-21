@@ -23,7 +23,11 @@ def validate_read_only_select(sql: str) -> None:
             or contains forbidden SQL keywords.
     """
     cleaned = sql.strip().rstrip(";")
-    if not cleaned.upper().startswith("SELECT") and not cleaned.upper().startswith("WITH"):
+    if not cleaned.upper().startswith("SELECT") and not cleaned.upper().startswith(
+        "WITH"
+    ):
         raise ValueError("Only analytical SELECT queries are allowed.")
     if FORBIDDEN_SQL_PATTERNS.search(cleaned):
-        raise ValueError("Forbidden SQL operation detected. Only read-only SELECT is permitted.")
+        raise ValueError(
+            "Forbidden SQL operation detected. Only read-only SELECT is permitted."
+        )

@@ -205,8 +205,7 @@ class ChatMessageWorkflow:
             return self._build_result(
                 request=request,
                 answer=(
-                    "A dataset must be selected before a chart can be "
-                    "generated."
+                    "A dataset must be selected before a chart can be " "generated."
                 ),
                 intent=ChatIntent.CHART_REQUEST,
                 tool_used=None,
@@ -313,8 +312,4 @@ class ChatMessageWorkflow:
         if not isinstance(value, Iterable) or isinstance(value, str):
             return ()
 
-        return tuple(
-            item
-            for item in value
-            if isinstance(item, str)
-        )
+        return tuple(item for item in value if isinstance(item, str))

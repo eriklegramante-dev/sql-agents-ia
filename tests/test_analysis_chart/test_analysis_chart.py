@@ -18,6 +18,7 @@ def sample_dataset_id() -> str:
 
 @pytest.fixture
 def mock_dataset_repo(sample_dataset_id: str) -> MagicMock:
+    """Mocks the dataset repository returning a prepared dataset."""
     repo = MagicMock()
     mock_dataset = MagicMock()
     mock_dataset.id = sample_dataset_id
@@ -44,7 +45,7 @@ def mock_query_adapter() -> MagicMock:
     return adapter
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_generate_chart_explicit_success(
     mock_dataset_repo: MagicMock,
     mock_query_adapter: MagicMock,
@@ -73,13 +74,24 @@ async def test_generate_chart_explicit_success(
     assert len(result.rows) == 2
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_generate_chart_question_success(
     mock_dataset_repo: MagicMock,
     mock_query_adapter: MagicMock,
     sample_dataset_id: str,
 ) -> None:
     """Tests question-based chart inference and execution."""
+    # O mock retorna a coluna 'total' compatível com o alias inferido pelo planner
+    mock_query_adapter.execute_query = AsyncMock(
+        return_value={
+            "columns": ["category", "total"],
+            "rows": [
+                {"category": "Electronics", "total": 10},
+                {"category": "Books", "total": 5},
+            ],
+        }
+    )
+
     service = AnalysisService(
         dataset_repo=mock_dataset_repo,
         query_adapter=mock_query_adapter,
@@ -93,18 +105,20 @@ async def test_generate_chart_question_success(
 
     assert result.dataset_id == sample_dataset_id
     assert result.chart_type == "bar"
+    assert result.chart_spec.x_field == "category"
+    assert result.chart_spec.y_field == "total"
     assert result.chart_spec.data is not None
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_generate_chart_rejects_unprepared_dataset(
     mock_dataset_repo: MagicMock,
     mock_query_adapter: MagicMock,
     sample_dataset_id: str,
 ) -> None:
-    """Tests failure when dataset is in uploaded/pending status."""
+    """Tests failure when dataset is in an unprepared status."""
     mock_dataset = MagicMock()
-    mock_dataset.status = DatasetStatus.UPLOADED
+    mock_dataset.status = DatasetStatus.UPLOADING
     mock_dataset_repo.find_by_id = AsyncMock(return_value=mock_dataset)
 
     service = AnalysisService(
@@ -120,7 +134,7 @@ async def test_generate_chart_rejects_unprepared_dataset(
         await service.generate_chart(payload)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_generate_chart_rejects_unsafe_sql(
     mock_dataset_repo: MagicMock,
     mock_query_adapter: MagicMock,
@@ -143,7 +157,7 @@ async def test_generate_chart_rejects_unsafe_sql(
         await service.generate_chart(payload)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_generate_chart_missing_fields_validation(
     mock_dataset_repo: MagicMock,
     mock_query_adapter: MagicMock,

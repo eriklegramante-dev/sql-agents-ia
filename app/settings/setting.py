@@ -94,6 +94,15 @@ class StorageSettings(BaseSettings):
     }
 
 
+class SecuritySettings(BaseSettings):
+    secret_key: str = "test_secret_key"
+
+    model_config = {
+        "env_prefix": "SECURITY_",
+        "extra": "ignore",
+    }
+
+
 class Settings(BaseSettings):
     env: AppEnvironmentSettings = AppEnvironmentSettings()
     sentry: SentrySettings = SentrySettings()
@@ -102,6 +111,7 @@ class Settings(BaseSettings):
     minio: MinioSettings = MinioSettings()
     database: DatabaseSettings = DatabaseSettings()
     storage: StorageSettings = StorageSettings()
+    security: SecuritySettings = SecuritySettings()
 
     model_config = {
         "env_file": ".env",

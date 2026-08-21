@@ -9,6 +9,7 @@ from app.models.dataset_table import DatasetTable
 
 from app.core.datasets.models import DatasetMetadata
 
+
 class DatasetRepository(BaseRepository[DatasetTable]):
     """
     Repository responsible for persisting and retrieving dataset metadata.
@@ -240,7 +241,7 @@ class DatasetRepository(BaseRepository[DatasetTable]):
             created_at=row["created_at"],
             updated_at=row["updated_at"],
         )
-    
+
     async def find_by_upload(
         self,
         dataset_id: UUID,

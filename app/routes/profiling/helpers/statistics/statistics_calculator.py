@@ -67,9 +67,7 @@ class StatisticsCalculator:
         numeric_columns = dataframe.select_dtypes(include=["number"])
 
         for column_name in numeric_columns.columns:
-            column_statistics = self.calculate_for_column(
-                numeric_columns[column_name]
-            )
+            column_statistics = self.calculate_for_column(numeric_columns[column_name])
 
             if column_statistics:
                 statistics[column_name] = column_statistics

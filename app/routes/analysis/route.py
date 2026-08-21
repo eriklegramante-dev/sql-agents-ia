@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+
 from app.routes.analysis.controllers.controller import AnalysisController
+from app.routes.analysis.dependencies import get_analysis_controller
 from app.routes.analysis.dtos.dto import (
     AnalysisChartRequestDTO,
     AnalysisChartResponseDTO,
@@ -17,7 +19,7 @@ router = APIRouter(prefix="/analysis", tags=["Analysis"])
 )
 async def generate_chart(
     payload: AnalysisChartRequestDTO,
-    controller: AnalysisController = Depends(),
+    controller: AnalysisController = Depends(get_analysis_controller),
 ) -> AnalysisChartResponseDTO:
     """
     Generates a simple chart specification for a prepared dataset.
@@ -30,6 +32,7 @@ async def generate_chart(
         payload:
             Request payload containing dataset identifier, chart configuration,
             or natural-language question.
+
         controller:
             Injected controller responsible for delegating chart generation.
 

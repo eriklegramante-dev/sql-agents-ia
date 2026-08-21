@@ -154,10 +154,7 @@ def test_generate_signed_part_url_returns_url() -> None:
     assert client.presigned_url_request is not None
     assert client.presigned_url_request["method"] == "PUT"
     assert client.presigned_url_request["bucket_name"] == "bucket"
-    assert (
-        client.presigned_url_request["object_name"]
-        == "datasets/id/raw/file.csv"
-    )
+    assert client.presigned_url_request["object_name"] == "datasets/id/raw/file.csv"
     assert client.presigned_url_request["extra_query_params"] == {
         "uploadId": "upload-id",
         "partNumber": "1",

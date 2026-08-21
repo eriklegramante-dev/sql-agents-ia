@@ -2,7 +2,6 @@ import asyncpg
 
 from app.settings.setting import get_settings
 
-
 _db_pool: asyncpg.Pool | None = None
 
 

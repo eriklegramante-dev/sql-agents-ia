@@ -10,6 +10,7 @@ from app.repositories.upload_metadata_repository import UploadMetadataRepository
 
 from uuid import UUID
 
+
 class UploadCompletionWorkflow:
     """Workflow responsible for completing multipart uploads.
 
@@ -71,7 +72,7 @@ class UploadCompletionWorkflow:
                 f"dataset_id={dataset_id}, upload_id={upload_id}"
             )
             raise ValueError("Upload metadata not found.")
-        
+
         current_status = metadata.get("upload_status")
 
         if current_status != UploadStatus.UPLOADING.value:
@@ -123,9 +124,7 @@ class UploadCompletionWorkflow:
 
         metadata["completed_at"] = datetime.now(timezone.utc).isoformat()
 
-        LOGGER.log_info(
-            "[upload:complete:workflow] Upload completed successfully"
-        )
+        LOGGER.log_info("[upload:complete:workflow] Upload completed successfully")
 
         return {
             "dataset_id": dataset_id,
@@ -173,10 +172,7 @@ class UploadCompletionWorkflow:
         if len(part_numbers) != len(set(part_numbers)):
             raise ValueError("Duplicated part numbers are not allowed.")
 
-        if (
-            expected_chunks_count is not None
-            and len(parts) != expected_chunks_count
-        ):
+        if expected_chunks_count is not None and len(parts) != expected_chunks_count:
             raise ValueError(
                 "Uploaded parts count does not match expected chunks count."
             )

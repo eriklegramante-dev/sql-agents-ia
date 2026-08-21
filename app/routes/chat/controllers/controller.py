@@ -73,15 +73,13 @@ class ChatMessageController:
         """
         try:
             self._logger.log_info(
-                f"Starting chat message controller for user "
-                f"{request.user_id}."
+                f"Starting chat message controller for user " f"{request.user_id}."
             )
 
             response_data = await self._service.execute(request)
 
             self._logger.log_info(
-                f"Chat message controller completed for user "
-                f"{request.user_id}."
+                f"Chat message controller completed for user " f"{request.user_id}."
             )
 
             return ChatMessageResponseDTO(
@@ -92,9 +90,7 @@ class ChatMessageController:
             )
 
         except AppException as error:
-            self._logger.log_warning(
-                f"Chat message processing failed: {error.message}"
-            )
+            self._logger.log_warning(f"Chat message processing failed: {error.message}")
 
             raise HTTPException(
                 status_code=error.status_code,

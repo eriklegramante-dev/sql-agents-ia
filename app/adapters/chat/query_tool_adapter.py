@@ -4,7 +4,6 @@ from uuid import UUID
 from app.chat.exceptions import QueryExecutionException
 from app.chat.models import ChatArtifact, QueryResult
 
-
 QueryExecutor = Callable[
     [UUID, str],
     Awaitable[QueryResult],
@@ -30,6 +29,7 @@ class QueryToolAdapter:
             Asynchronous callable responsible for processing analytical
             questions against a dataset.
     """
+
     def __init__(
         self,
         executor: QueryExecutor,
@@ -71,9 +71,7 @@ class QueryToolAdapter:
         )
 
         if not result:
-            raise QueryExecutionException(
-                "The analytical query returned no result."
-            )
+            raise QueryExecutionException("The analytical query returned no result.")
 
         return ChatArtifact(
             type="query_result",

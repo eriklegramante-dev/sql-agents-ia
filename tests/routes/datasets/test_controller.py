@@ -51,10 +51,7 @@ async def test_get_dataset_returns_success_response():
 
     assert response.success is True
 
-    assert (
-        response.message
-        == "Dataset retrieved successfully."
-    )
+    assert response.message == "Dataset retrieved successfully."
 
     assert response.data is not None
 
@@ -67,9 +64,7 @@ async def test_get_dataset_returns_success_response():
 async def test_get_dataset_propagates_not_found_exception():
     service = FakeDatasetService()
 
-    service.error = NotFoundException(
-        "Dataset not found."
-    )
+    service.error = NotFoundException("Dataset not found.")
 
     controller = DatasetController(
         service=service,

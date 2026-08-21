@@ -96,9 +96,7 @@ class DatasetPreviewControllerTest(unittest.IsolatedAsyncioTestCase):
             context.exception.detail,
             {
                 "success": False,
-                "message": (
-                    "Internal server error during dataset preview retrieval."
-                ),
+                "message": ("Internal server error during dataset preview retrieval."),
                 "data": None,
                 "errors": ["An unexpected internal error occurred."],
             },

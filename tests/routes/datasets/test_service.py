@@ -35,6 +35,7 @@ class FakeWorkflow:
             updated_at=now,
         )
 
+
 @pytest.mark.asyncio
 async def test_get_dataset_returns_dataset_metadata():
 
@@ -62,9 +63,7 @@ async def test_get_dataset_propagates_not_found_exception():
 
     workflow = FakeWorkflow()
 
-    workflow.error = NotFoundException(
-        "Dataset not found."
-    )
+    workflow.error = NotFoundException("Dataset not found.")
 
     service = DatasetService(
         workflow=workflow,

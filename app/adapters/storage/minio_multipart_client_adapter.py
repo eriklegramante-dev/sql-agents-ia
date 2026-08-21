@@ -152,9 +152,7 @@ class MinioMultipartClientAdapter:
             )
 
         except (S3Error, HTTPError) as exc:
-            raise StorageOperationError(
-                operation="complete multipart upload"
-            ) from exc
+            raise StorageOperationError(operation="complete multipart upload") from exc
 
     def abort(
         self,
@@ -179,6 +177,4 @@ class MinioMultipartClientAdapter:
                 upload_id=upload_id,
             )
         except (S3Error, HTTPError) as exc:
-            raise StorageOperationError(
-                operation="abort multipart upload"
-            ) from exc
+            raise StorageOperationError(operation="abort multipart upload") from exc

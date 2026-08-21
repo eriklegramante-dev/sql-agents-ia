@@ -7,7 +7,6 @@ from app.routes.schema.controllers.controller import DatasetSchemaController
 from app.routes.schema.dependencies.dependence import get_dataset_schema_controller
 from app.routes.schema.dtos.dto import DatasetSchemaResponseDTO
 
-
 router = APIRouter()
 
 

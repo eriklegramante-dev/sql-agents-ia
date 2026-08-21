@@ -74,17 +74,11 @@ class UploadInitializationWorkflow:
 
         self.plan_builder = plan_builder or UploadPlanBuilder()
 
-        self.signed_parts_builder = (
-            signed_parts_builder
-            or SignedPartsBuilder(
-                storage_adapter=storage_adapter,
-            )
+        self.signed_parts_builder = signed_parts_builder or SignedPartsBuilder(
+            storage_adapter=storage_adapter,
         )
 
-        self.metadata_builder = (
-            metadata_builder
-            or UploadMetadataBuilder()
-        )
+        self.metadata_builder = metadata_builder or UploadMetadataBuilder()
 
     async def run(
         self,
@@ -106,9 +100,7 @@ class UploadInitializationWorkflow:
             Upload initialization result.
         """
 
-        LOGGER.log_info(
-            "[upload:init:workflow] Starting upload initialization"
-        )
+        LOGGER.log_info("[upload:init:workflow] Starting upload initialization")
 
         self.validator.validate(
             filename=request.filename,
@@ -167,9 +159,7 @@ class UploadInitializationWorkflow:
 
         await self.repository.create(metadata)
 
-        LOGGER.log_info(
-            "[upload:init:workflow] Upload metadata persisted successfully"
-        )
+        LOGGER.log_info("[upload:init:workflow] Upload metadata persisted successfully")
 
         return {
             "dataset_id": dataset_id,

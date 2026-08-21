@@ -41,13 +41,9 @@ async def test_execute_returns_dataset_metadata():
 
     repository.dataset = make_dataset()
 
-    workflow = DatasetWorkflow(
-        dataset_repository=repository
-    )
+    workflow = DatasetWorkflow(dataset_repository=repository)
 
-    response = await workflow.execute(
-        repository.dataset.dataset_id
-    )
+    response = await workflow.execute(repository.dataset.dataset_id)
 
     assert response.dataset_id == repository.dataset.dataset_id
     assert response.name == "Customers"
@@ -63,14 +59,10 @@ async def test_execute_returns_dataset_metadata():
 async def test_execute_raises_not_found_when_dataset_does_not_exist():
     repository = FakeRepository()
 
-    workflow = DatasetWorkflow(
-        dataset_repository=repository
-    )
+    workflow = DatasetWorkflow(dataset_repository=repository)
 
     with pytest.raises(NotFoundException):
-        await workflow.execute(
-            uuid4()
-        )
+        await workflow.execute(uuid4())
 
 
 @pytest.mark.asyncio
@@ -81,12 +73,8 @@ async def test_execute_accepts_status_as_plain_string():
 
     repository.dataset = dataset
 
-    workflow = DatasetWorkflow(
-        dataset_repository=repository
-    )
+    workflow = DatasetWorkflow(dataset_repository=repository)
 
-    response = await workflow.execute(
-        dataset.dataset_id
-    )
+    response = await workflow.execute(dataset.dataset_id)
 
     assert response.status == "COMPLETED"

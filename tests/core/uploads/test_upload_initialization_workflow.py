@@ -130,9 +130,7 @@ async def test_run_rejects_file_larger_than_configured_limit():
     workflow, _ = make_workflow()
 
     with pytest.raises(ValueError, match="File size exceeds"):
-        await workflow.run(
-            make_request(file_size_bytes=20_000_000)
-        )
+        await workflow.run(make_request(file_size_bytes=20_000_000))
 
 
 @pytest.mark.asyncio
@@ -143,8 +141,7 @@ async def test_run_accepts_xlsx_file():
         make_request(
             filename="customers.xlsx",
             content_type=(
-                "application/vnd.openxmlformats-officedocument."
-                "spreadsheetml.sheet"
+                "application/vnd.openxmlformats-officedocument." "spreadsheetml.sheet"
             ),
         )
     )

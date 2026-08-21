@@ -57,7 +57,7 @@ class DatasetProfileWorkflow:
             Logger used to record workflow execution.
         prepared_container:
             Storage container where prepared datasets are stored.
-    
+
     """
 
     def __init__(
@@ -144,9 +144,7 @@ class DatasetProfileWorkflow:
                 str(error),
             )
             self.logger.error("Dataset profiling failed.")
-            raise ProcessingException(
-                f"Dataset profiling failed: {error}"
-            ) from error
+            raise ProcessingException(f"Dataset profiling failed: {error}") from error
 
     def _build_response(
         self,

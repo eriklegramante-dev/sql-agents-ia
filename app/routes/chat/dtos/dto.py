@@ -52,10 +52,7 @@ class ChatMessageRequestDTO(BaseModel):
 
     @field_validator("user_id")
     @classmethod
-    def validate_user_id(
-        cls,
-        value: int | str
-    ) -> int | str:
+    def validate_user_id(cls, value: int | str) -> int | str:
         """
         Validates and normalizes the user identifier.
 
@@ -86,10 +83,7 @@ class ChatMessageRequestDTO(BaseModel):
 
     @field_validator("message")
     @classmethod
-    def normalize_message(
-        cls,
-        value: str
-    ) -> str:
+    def normalize_message(cls, value: str) -> str:
         """
         Validates and normalizes the user message.
 
@@ -114,10 +108,7 @@ class ChatMessageRequestDTO(BaseModel):
 
     @field_validator("session_id")
     @classmethod
-    def normalize_session_id(
-        cls,
-        value: str | None
-    ) -> str | None:
+    def normalize_session_id(cls, value: str | None) -> str | None:
         """
         Validates the optional session identifier.
 

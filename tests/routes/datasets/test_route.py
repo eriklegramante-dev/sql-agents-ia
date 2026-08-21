@@ -33,16 +33,12 @@ class FakeDatasetController:
 
 
 def test_get_dataset_route_success(client):
-    app.dependency_overrides[
-        get_dataset_controller
-    ] = lambda: FakeDatasetController()
+    app.dependency_overrides[get_dataset_controller] = lambda: FakeDatasetController()
 
     dataset_id = uuid4()
 
     try:
-        response = client.get(
-            f"/api/v1/datasets/{dataset_id}"
-        )
+        response = client.get(f"/api/v1/datasets/{dataset_id}")
     finally:
         app.dependency_overrides.clear()
 
@@ -52,31 +48,18 @@ def test_get_dataset_route_success(client):
 
     assert body["success"] is True
 
-    assert (
-        body["message"]
-        == "Dataset retrieved successfully."
-    )
+    assert body["message"] == "Dataset retrieved successfully."
 
-    assert (
-        body["data"]["dataset_id"]
-        == str(dataset_id)
-    )
+    assert body["data"]["dataset_id"] == str(dataset_id)
 
-    assert (
-        body["data"]["status"]
-        == "COMPLETED"
-    )
+    assert body["data"]["status"] == "COMPLETED"
 
 
 def test_get_dataset_route_rejects_invalid_uuid(client):
-    app.dependency_overrides[
-        get_dataset_controller
-    ] = lambda: FakeDatasetController()
+    app.dependency_overrides[get_dataset_controller] = lambda: FakeDatasetController()
 
     try:
-        response = client.get(
-            "/api/v1/datasets/invalid-uuid"
-        )
+        response = client.get("/api/v1/datasets/invalid-uuid")
     finally:
         app.dependency_overrides.clear()
 

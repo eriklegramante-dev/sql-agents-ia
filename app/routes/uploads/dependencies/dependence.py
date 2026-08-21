@@ -39,9 +39,7 @@ async def get_upload_controller() -> UploadController:
         client=minio_client,
         multipart_client=multipart_client,
         bucket_name=settings.minio.bucket_name,
-        signed_url_expires_seconds=(
-            settings.upload.signed_url_expires_seconds
-        ),
+        signed_url_expires_seconds=(settings.upload.signed_url_expires_seconds),
     )
 
     pool = await get_db_pool()

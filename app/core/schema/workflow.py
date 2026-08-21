@@ -70,21 +70,19 @@ class DatasetSchemaWorkflow:
                 metadata is available for the specified dataset.
         """
 
-        self.logger.log_info(f"Starting schema retrieval workflow for dataset {dataset_id}.")
+        self.logger.log_info(
+            f"Starting schema retrieval workflow for dataset {dataset_id}."
+        )
 
         dataset = await self.repository.get_by_id(dataset_id)
 
         if dataset is None:
             self.logger.log_warning(f"Dataset with ID {dataset_id} not found.")
-            raise NotFoundException(
-                f"Dataset with ID {dataset_id} not found.")
-
+            raise NotFoundException(f"Dataset with ID {dataset_id} not found.")
 
         current_status = (
-            dataset.status.value
-            if hasattr(dataset.status, "value")
-            else dataset.status
-        )                       
+            dataset.status.value if hasattr(dataset.status, "value") else dataset.status
+        )
 
         if dataset.status != DatasetStatus.PREPARED:
             self.logger.log_warning(
@@ -97,7 +95,9 @@ class DatasetSchemaWorkflow:
         schema = await self.repository.get_schema(dataset_id)
 
         if not schema:
-            self.logger.log_warning(f"No schema metadata found for dataset {dataset_id}.")
+            self.logger.log_warning(
+                f"No schema metadata found for dataset {dataset_id}."
+            )
             raise NotFoundException(
                 f"No schema metadata found for dataset {dataset_id}."
             )

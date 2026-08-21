@@ -13,6 +13,7 @@ class DatasetRequestDTO(BaseModel):
     Args:
         dataset_id: Dataset identifier used to create the request instance.
     """
+
     dataset_id: UUID = Field(
         ...,
         description="Unique dataset identifier.",

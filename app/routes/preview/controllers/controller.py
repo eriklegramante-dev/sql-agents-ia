@@ -89,7 +89,6 @@ class DatasetPreviewController:
                         "Internal server error during dataset preview retrieval."
                     ),
                     "data": None,
-                    "errors": (
-                        ["An unexpected internal error occurred."]),
+                    "errors": (["An unexpected internal error occurred."]),
                 },
             ) from error

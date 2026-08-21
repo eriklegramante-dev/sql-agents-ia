@@ -73,9 +73,7 @@ class FailingStorageAdapter:
         upload_id,
         parts,
     ):
-        raise StorageOperationError(
-            operation="complete multipart upload"
-        )
+        raise StorageOperationError(operation="complete multipart upload")
 
 
 def build_metadata(
@@ -94,9 +92,7 @@ def build_metadata(
 @pytest.mark.asyncio
 async def test_complete_upload_successfully():
 
-    repository = FakeUploadMetadataRepository(
-        build_metadata()
-    )
+    repository = FakeUploadMetadataRepository(build_metadata())
 
     storage = FakeStorageAdapter()
 
@@ -120,7 +116,6 @@ async def test_complete_upload_successfully():
         ],
     )
 
-
     assert result["status"] == UploadStatus.COMPLETED.value
     assert result["completed_parts_count"] == 2
 
@@ -135,9 +130,7 @@ async def test_complete_upload_successfully():
         },
     ]
 
-    assert repository.updated_status["upload_status"] == (
-        UploadStatus.COMPLETED.value
-    )
+    assert repository.updated_status["upload_status"] == (UploadStatus.COMPLETED.value)
 
 
 @pytest.mark.asyncio
@@ -163,9 +156,7 @@ async def test_complete_upload_metadata_not_found():
 async def test_complete_upload_invalid_status():
 
     repository = FakeUploadMetadataRepository(
-        build_metadata(
-            status=UploadStatus.COMPLETED.value
-        )
+        build_metadata(status=UploadStatus.COMPLETED.value)
     )
 
     workflow = UploadCompletionWorkflow(
@@ -180,7 +171,7 @@ async def test_complete_upload_invalid_status():
         await workflow.run(
             "dataset-1",
             "upload-1",
-            [{"part_number":1,"etag":"abc"}],
+            [{"part_number": 1, "etag": "abc"}],
         )
 
 
@@ -202,7 +193,7 @@ async def test_complete_upload_without_object_key():
         await workflow.run(
             "dataset-1",
             "upload-1",
-            [{"part_number":1,"etag":"abc"}],
+            [{"part_number": 1, "etag": "abc"}],
         )
 
 
@@ -242,12 +233,12 @@ async def test_complete_upload_duplicate_parts():
             "upload-1",
             [
                 {
-                    "part_number":1,
-                    "etag":"a",
+                    "part_number": 1,
+                    "etag": "a",
                 },
                 {
-                    "part_number":1,
-                    "etag":"b",
+                    "part_number": 1,
+                    "etag": "b",
                 },
             ],
         )
@@ -270,12 +261,12 @@ async def test_complete_upload_invalid_part_number():
             "upload-1",
             [
                 {
-                    "part_number":0,
-                    "etag":"abc",
+                    "part_number": 0,
+                    "etag": "abc",
                 },
                 {
-                    "part_number":2,
-                    "etag":"def",
+                    "part_number": 2,
+                    "etag": "def",
                 },
             ],
         )
@@ -298,12 +289,12 @@ async def test_complete_upload_invalid_etag():
             "upload-1",
             [
                 {
-                    "part_number":1,
-                    "etag":"",
+                    "part_number": 1,
+                    "etag": "",
                 },
                 {
-                    "part_number":2,
-                    "etag":"abc",
+                    "part_number": 2,
+                    "etag": "abc",
                 },
             ],
         )
@@ -317,7 +308,6 @@ async def test_complete_upload_wrong_chunks_count():
         FakeStorageAdapter(),
     )
 
-
     with pytest.raises(
         ValueError,
         match="does not match expected chunks count",
@@ -327,8 +317,8 @@ async def test_complete_upload_wrong_chunks_count():
             "upload-1",
             [
                 {
-                    "part_number":1,
-                    "etag":"abc",
+                    "part_number": 1,
+                    "etag": "abc",
                 }
             ],
         )
@@ -342,7 +332,6 @@ async def test_complete_upload_storage_failure():
         FailingStorageAdapter(),
     )
 
-
     with pytest.raises(
         UploadCompletionError,
         match="Upload completion failed",
@@ -352,12 +341,12 @@ async def test_complete_upload_storage_failure():
             "upload-1",
             [
                 {
-                    "part_number":1,
-                    "etag":"abc",
+                    "part_number": 1,
+                    "etag": "abc",
                 },
                 {
-                    "part_number":2,
-                    "etag":"def",
+                    "part_number": 2,
+                    "etag": "def",
                 },
             ],
         )

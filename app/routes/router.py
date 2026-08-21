@@ -4,6 +4,7 @@ from app.routes.agent_preferences.route import (
     router as agent_preferences_router,
 )
 from app.routes.prepare.route import router as prepare_router
+from app.routes.analysis.route import router as analysis_router
 from app.routes.schema.route import router as schema_router
 from app.routes.update.route import router as update_router
 from app.routes.uploads.route import router as uploads_router
@@ -37,10 +38,7 @@ api_router.include_router(
     tags=["Schema"],
 )
 
-api_router.include_router(
-    profiling_router,
-    tags=["Profiling"]
-)
+api_router.include_router(profiling_router, tags=["Profiling"])
 
 api_router.include_router(
     datasets_router,
@@ -52,4 +50,6 @@ api_router.include_router(
     tags=["Preview"],
 )
 
-api_router.include_router(chat_router) 
+api_router.include_router(chat_router)
+
+api_router.include_router(analysis_router)

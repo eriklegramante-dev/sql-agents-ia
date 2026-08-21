@@ -51,8 +51,6 @@ class DatasetService:
             dataset_id=dataset_id,
         )
 
-        self.logger.log_info(
-            "[dataset:get:service] Dataset retrieval finished"
-        )
+        self.logger.log_info("[dataset:get:service] Dataset retrieval finished")
 
         return result

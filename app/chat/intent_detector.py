@@ -54,10 +54,7 @@ class ChatIntentDetector:
         "excluir banco",
     }
 
-    def detect(
-        self,
-        message: str
-        ) -> ChatIntent:
+    def detect(self, message: str) -> ChatIntent:
         """
         Classifies an incoming chat message into one of the supported chat
         intents.
