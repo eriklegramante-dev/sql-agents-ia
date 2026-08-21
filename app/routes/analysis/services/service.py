@@ -5,6 +5,7 @@ Orchestrates chart planning, analytical query generation, SQL security
 validation, and chart specification construction.
 """
 
+
 from app.enums.chart_type import ChartType
 from app.enums.dataset_status import DatasetStatus
 from app.routes.analysis.dtos.dto import (
@@ -81,16 +82,15 @@ class AnalysisService:
                 data=None,
             )
 
-        status_value = getattr(dataset, "status", None)
-        if status_value != DatasetStatus.PREPARED:
+        if dataset.status != DatasetStatus.PREPARED:
             return AnalysisChartResponseDTO(
                 success=False,
-                message=f"Dataset is not prepared. Current status: {status_value}",
+                message=f"Dataset is not prepared. Current status: {dataset.status}",
                 data=None,
             )
 
-        table_name = getattr(dataset, "table_name", "dataset_table")
-        available_columns = getattr(dataset, "columns", [])
+        table_name = dataset.table_name
+        available_columns = dataset.columns
 
         if payload.sql:
             validate_safe_select_query(payload.sql)
@@ -100,11 +100,10 @@ class AnalysisService:
             target_y = payload.y_field
             title = f"Chart for dataset {payload.dataset_id}"
         elif payload.question:
-            plan = self._planner_tool.plan(
+            plan = self._planner_tool.plan_chart(
                 question=payload.question,
                 table_name=table_name,
-                available_columns=available_columns,
-                limit=payload.limit,
+                schema_columns=available_columns,
             )
             target_sql = plan.sql
             target_type = plan.chart_type
@@ -143,7 +142,6 @@ class AnalysisService:
             title=title,
             x_field=resolved_x,
             y_field=resolved_y,
-            columns=columns,
             rows=rows,
         )
 
@@ -152,7 +150,7 @@ class AnalysisService:
             message="Chart generated successfully.",
             data=AnalysisChartDataDTO(
                 dataset_id=payload.dataset_id,
-                chart_type=target_type,
+                chart_type=target_type.value if hasattr(target_type, "value") else str(target_type),
                 title=title,
                 executed_sql=target_sql,
                 x_field=resolved_x,

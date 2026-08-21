@@ -10,6 +10,21 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from app.enums.dataset_status import DatasetStatus
+
+
+class DatasetEntityProtocol(Protocol):
+    """
+    Structural interface representing the dataset domain entity.
+
+    Exposes attributes strictly required by the analytical workflow.
+    """
+
+    id: UUID | str
+    status: DatasetStatus
+    table_name: str
+    columns: list[str]
+
 
 class QueryResult(BaseModel):
     """
@@ -33,7 +48,7 @@ class DatasetRepositoryProtocol(Protocol):
     Decouples domain and service logic from concrete database implementations.
     """
 
-    async def find_by_id(self, dataset_id: UUID) -> object | None:
+    async def find_by_id(self, dataset_id: UUID) -> DatasetEntityProtocol | None:
         """
         Retrieves a dataset entity by its unique identifier.
 
@@ -42,8 +57,8 @@ class DatasetRepositoryProtocol(Protocol):
                 Unique identifier of the dataset.
 
         Returns:
-            object | None:
-                The dataset entity if found, otherwise None.
+            DatasetEntityProtocol | None:
+                The typed dataset entity if found, otherwise None.
         """
         ...
 
