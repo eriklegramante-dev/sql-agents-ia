@@ -1,54 +1,70 @@
+"""
+Analysis HTTP route controller.
+
+Handles incoming API requests, coordinates execution with the analysis service,
+and standardizes controlled responses for business and runtime exceptions.
+"""
+
+import logging
+
 from app.routes.analysis.dtos.dto import (
     AnalysisChartRequestDTO,
     AnalysisChartResponseDTO,
 )
 from app.routes.analysis.services.service import AnalysisService
 
+logger = logging.getLogger(__name__)
+
 
 class AnalysisController:
-    """Controller responsible for handling analysis chart endpoints."""
+    """
+    Controller handling HTTP operations for the dataset analysis module.
+
+    Encapsulates service invocation and shields public API clients from
+    internal implementation details during unexpected failures.
+    """
 
     def __init__(self, service: AnalysisService) -> None:
         """
-        Initializes the analysis controller with the required service.
+        Initializes the analysis controller.
 
         Args:
-            service:
-                Business logic service for dataset analysis.
+            service (AnalysisService):
+                Wired analysis service instance for business execution.
         """
-        self.service = service
+        self._service = service
 
     async def generate_chart(
         self,
-        request: AnalysisChartRequestDTO,
+        payload: AnalysisChartRequestDTO,
     ) -> AnalysisChartResponseDTO:
         """
-        Delegates chart generation to the service layer and wraps the response.
+        Handles chart generation requests with controlled error handling.
+
+        Processes incoming requests, sanitizes validation errors, logs unexpected
+        exceptions internally, and returns formatted response DTOs.
 
         Args:
-            request:
-                Request DTO containing dataset identifier and parameters.
+            payload (AnalysisChartRequestDTO):
+                Validated request payload containing chart parameters.
 
         Returns:
             AnalysisChartResponseDTO:
-                Structured response DTO with chart data or error details.
+                Structured DTO indicating success or controlled error message.
         """
         try:
-            data = await self.service.generate_chart(request)
-            return AnalysisChartResponseDTO(
-                success=True,
-                message="Chart generated successfully.",
-                data=data,
-            )
+            return await self._service.generate_chart(payload)
         except ValueError as err:
+            logger.warning("Validation error while generating chart: %s", err)
             return AnalysisChartResponseDTO(
                 success=False,
                 message=str(err),
                 data=None,
             )
-        except Exception as err:
+        except Exception:
+            logger.exception("Unexpected error occurred while generating chart.")
             return AnalysisChartResponseDTO(
                 success=False,
-                message=f"Unexpected error while generating chart: {err}",
+                message="An internal server error occurred while processing the chart.",
                 data=None,
             )

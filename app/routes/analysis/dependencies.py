@@ -1,11 +1,18 @@
-"""Dependency injection providers for analysis routes."""
+"""
+Dependency injection providers for analysis routes.
 
-from typing import Any, Dict
+Configures and provides instances for repositories, analytical query adapters,
+chart planner tools, application services, and route controllers.
+"""
 
-from app.database.dataset_repository import DatasetRepository
 from app.prepare.dependencies import get_dataset_repository
 from app.routes.analysis.controllers.controller import AnalysisController
 from app.routes.analysis.helpers.chart_planner import ChartPlannerTool
+from app.routes.analysis.protocols import (
+    DatasetRepositoryProtocol,
+    QueryAdapterProtocol,
+    QueryResult,
+)
 from app.routes.analysis.services.service import AnalysisService
 
 
@@ -13,38 +20,37 @@ class DefaultQueryAdapter:
     """
     Default query execution engine adapter.
 
-    Provides query execution fallback until analytical database adapters
-    are fully bound.
+    Implements QueryAdapterProtocol to provide analytical query execution.
     """
 
     async def execute_query(
         self,
         sql: str,
-    ) -> Dict[str, Any]:
+    ) -> QueryResult:
         """
         Executes an analytical SQL statement.
 
         Args:
-            sql:
+            sql (str):
                 Read-only SQL query to run against the dataset engine.
 
         Returns:
-            Dict[str, Any]:
-                Query result mapping containing column definitions and records.
+            QueryResult:
+                Typed query result containing column definitions and records.
         """
-        return {
-            "columns": ["category", "total"],
-            "rows": [],
-        }
+        return QueryResult(
+            columns=["category", "total"],
+            rows=[],
+        )
 
 
-def get_query_adapter() -> Any:
+def get_query_adapter() -> QueryAdapterProtocol:
     """
-    Provides the analytical query adapter instance.
+    Provides the analytical query adapter instance adhering to QueryAdapterProtocol.
 
     Returns:
-        Any:
-            Configured query adapter.
+        QueryAdapterProtocol:
+            Configured query adapter for analytical queries.
     """
     return DefaultQueryAdapter()
 
@@ -68,9 +74,9 @@ async def get_analysis_service() -> AnalysisService:
         AnalysisService:
             Configured analysis service instance.
     """
-    dataset_repo: DatasetRepository = await get_dataset_repository()
-    query_adapter = get_query_adapter()
-    planner_tool = get_chart_planner_tool()
+    dataset_repo: DatasetRepositoryProtocol = await get_dataset_repository()
+    query_adapter: QueryAdapterProtocol = get_query_adapter()
+    planner_tool: ChartPlannerTool = get_chart_planner_tool()
 
     return AnalysisService(
         dataset_repo=dataset_repo,

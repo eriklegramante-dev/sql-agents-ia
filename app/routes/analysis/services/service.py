@@ -1,161 +1,164 @@
-import re
-from typing import Any, Optional
-from uuid import UUID
+"""
+Analysis service implementation.
 
-from app.database.dataset_repository import DatasetRepository
+Orchestrates chart planning, analytical query generation, SQL security
+validation, and chart specification construction.
+"""
+
 from app.enums.chart_type import ChartType
 from app.enums.dataset_status import DatasetStatus
 from app.routes.analysis.dtos.dto import (
     AnalysisChartDataDTO,
     AnalysisChartRequestDTO,
+    AnalysisChartResponseDTO,
 )
 from app.routes.analysis.helpers.chart_builder import ChartSpecBuilder
 from app.routes.analysis.helpers.chart_planner import ChartPlannerTool
-from app.security.sql_validator import validate_read_only_select
+from app.routes.analysis.protocols import (
+    DatasetRepositoryProtocol,
+    QueryAdapterProtocol,
+)
+from app.security.sql_validator import validate_safe_select_query
 
 
 class AnalysisService:
     """
-    Service responsible for orchestrating dataset chart generation workflows.
+    Application service managing analytical chart generation.
 
-    Coordinates dataset state verification, chart planning from natural-language
-    inputs or explicit parameters, analytical SQL validation, query execution,
-    and structured chart specification assembly.
-
-    Attributes:
-        dataset_repo:
-            Repository responsible for retrieving dataset persistence entities.
-        query_adapter:
-            Analytical query execution adapter used to run SQL statements.
-        planner_tool:
-            Tool responsible for converting natural-language prompts into
-            executable chart plans.
+    Coordinates dataset state verification, natural language query planning,
+    safe SQL validation, execution via query adapters, and spec assembly.
     """
 
     def __init__(
         self,
-        dataset_repo: DatasetRepository,
-        query_adapter: Any,
-        planner_tool: Optional[ChartPlannerTool] = None,
+        dataset_repo: DatasetRepositoryProtocol,
+        query_adapter: QueryAdapterProtocol,
+        planner_tool: ChartPlannerTool,
     ) -> None:
         """
-        Initialize the AnalysisService.
+        Initializes the analysis service with mandatory dependencies.
 
         Args:
-            dataset_repo:
-                Repository instance used to fetch dataset metadata and status.
-            query_adapter:
-                Adapter responsible for executing analytical SELECT queries.
-            planner_tool:
-                Optional helper tool for planning queries and chart types from
-                natural-language questions. Defaults to ChartPlannerTool.
+            dataset_repo (DatasetRepositoryProtocol):
+                Repository instance satisfying the persistence contract.
+            query_adapter (QueryAdapterProtocol):
+                Adapter instance executing analytical SQL statements.
+            planner_tool (ChartPlannerTool):
+                Planner tool used for natural language chart inference.
         """
-        self.dataset_repo = dataset_repo
-        self.query_adapter = query_adapter
-        self.planner_tool = planner_tool or ChartPlannerTool()
+        self._dataset_repo = dataset_repo
+        self._query_adapter = query_adapter
+        self._planner_tool = planner_tool
 
     async def generate_chart(
         self,
-        request: AnalysisChartRequestDTO,
-    ) -> AnalysisChartDataDTO:
+        payload: AnalysisChartRequestDTO,
+    ) -> AnalysisChartResponseDTO:
         """
-        Executes the chart generation workflow for a target dataset.
+        Generates chart specifications and execution data for a given dataset.
 
-        Validates that the dataset exists and is in a prepared or profiled state,
-        resolves the analytical SQL query (via explicit parameters or natural-language
-        planner), validates SQL safety rules, enforces execution row limits, executes
-        the query through the query adapter, and builds the final chart specification.
+        Validates the dataset preparation status, processes either an explicit
+        SQL statement or a natural language question, validates axis mapping,
+        and builds the complete chart response DTO.
 
         Args:
-            request:
-                Data transfer object containing the dataset identifier and chart
-                generation parameters (explicit SQL/fields or a natural question).
+            payload (AnalysisChartRequestDTO):
+                Chart generation request parameters.
 
         Returns:
-            AnalysisChartDataDTO:
-                Structured result containing chart properties, executed SQL,
-                raw records, and the frontend-ready chart specification.
+            AnalysisChartResponseDTO:
+                Structured response with operation status, message, and chart data.
 
         Raises:
             ValueError:
-                If the dataset does not exist, is not prepared/profiled, contains
-                unsafe SQL, or refers to axis fields missing from query results.
+                If SQL fails safe validation checks or axis fields are missing.
         """
-        dataset_uuid = UUID(request.dataset_id)
-        dataset = await self.dataset_repo.find_by_id(dataset_uuid)
-
+        dataset = await self._dataset_repo.find_by_id(payload.dataset_id)
         if not dataset:
-            raise ValueError(f"Dataset '{request.dataset_id}' not found.")
-
-        if dataset.status not in (DatasetStatus.PREPARED, DatasetStatus.PROFILED):
-            raise ValueError(
-                f"Dataset '{request.dataset_id}' must be prepared or profiled "
-                "before chart generation."
+            return AnalysisChartResponseDTO(
+                success=False,
+                message=f"Dataset {payload.dataset_id} not found.",
+                data=None,
             )
 
-        table_name = (
-            getattr(dataset, "table_name", None)
-            or f"dataset_{request.dataset_id.replace('-', '_')}"
-        )
-        schema_cols = getattr(dataset, "columns", None) or []
+        status_value = getattr(dataset, "status", None)
+        if status_value != DatasetStatus.PREPARED:
+            return AnalysisChartResponseDTO(
+                success=False,
+                message=f"Dataset is not prepared. Current status: {status_value}",
+                data=None,
+            )
 
-        if request.sql:
-            sql = request.sql
-            chart_type = (
-                request.chart_type.value
-                if isinstance(request.chart_type, ChartType)
-                else str(request.chart_type or "table")
+        table_name = getattr(dataset, "table_name", "dataset_table")
+        available_columns = getattr(dataset, "columns", [])
+
+        if payload.sql:
+            validate_safe_select_query(payload.sql)
+            target_sql = payload.sql
+            target_type = payload.chart_type or ChartType.BAR
+            target_x = payload.x_field
+            target_y = payload.y_field
+            title = f"Chart for dataset {payload.dataset_id}"
+        elif payload.question:
+            plan = self._planner_tool.plan(
+                question=payload.question,
+                table_name=table_name,
+                available_columns=available_columns,
+                limit=payload.limit,
             )
-            x_field = request.x_field
-            y_field = request.y_field
-            title = f"Analysis for {request.dataset_id}"
-        else:
-            plan = self.planner_tool.plan_chart(
-                request.question or "",
-                table_name,
-                schema_cols,
-            )
-            sql = plan.sql
-            chart_type = plan.chart_type
-            x_field = plan.x_field
-            y_field = plan.y_field
+            target_sql = plan.sql
+            target_type = plan.chart_type
+            target_x = plan.x_field
+            target_y = plan.y_field
             title = plan.title
-
-        validate_read_only_select(sql)
-
-        safe_limit = request.limit or 100
-        if not re.search(r"\bLIMIT\s+\d+", sql, re.IGNORECASE):
-            sql = f"{sql.rstrip(';')} LIMIT {safe_limit}"
-
-        query_result: dict[str, Any] = await self.query_adapter.execute_query(sql)
-        columns: list[str] = query_result.get("columns", [])
-        rows: list[dict[str, Any]] = query_result.get("rows", [])
-
-        if x_field and x_field not in columns:
-            raise ValueError(
-                f"Chart x_field '{x_field}' was not found in query results."
+        else:
+            return AnalysisChartResponseDTO(
+                success=False,
+                message="Either 'sql' or 'question' must be provided.",
+                data=None,
             )
-        if y_field and y_field not in columns:
-            raise ValueError(
-                f"Chart y_field '{y_field}' was not found in query results."
+
+        query_result = await self._query_adapter.execute_query(target_sql)
+        columns = query_result.columns
+        rows = query_result.rows
+
+        resolved_x = target_x or (columns[0] if columns else "x")
+        resolved_y = target_y or (columns[1] if len(columns) > 1 else resolved_x)
+
+        if resolved_x not in columns:
+            return AnalysisChartResponseDTO(
+                success=False,
+                message=f"Chart x_field '{resolved_x}' was not found in query results.",
+                data=None,
+            )
+        if resolved_y not in columns:
+            return AnalysisChartResponseDTO(
+                success=False,
+                message=f"Chart y_field '{resolved_y}' was not found in query results.",
+                data=None,
             )
 
         chart_spec = ChartSpecBuilder.build(
-            chart_type=chart_type,
+            chart_type=target_type,
             title=title,
-            x_field=x_field,
-            y_field=y_field,
+            x_field=resolved_x,
+            y_field=resolved_y,
+            columns=columns,
             rows=rows,
         )
 
-        return AnalysisChartDataDTO(
-            dataset_id=request.dataset_id,
-            chart_type=chart_type,
-            title=title,
-            executed_sql=sql,
-            x_field=x_field,
-            y_field=y_field,
-            columns=columns,
-            rows=rows,
-            chart_spec=chart_spec,
+        return AnalysisChartResponseDTO(
+            success=True,
+            message="Chart generated successfully.",
+            data=AnalysisChartDataDTO(
+                dataset_id=payload.dataset_id,
+                chart_type=target_type,
+                title=title,
+                executed_sql=target_sql,
+                x_field=resolved_x,
+                y_field=resolved_y,
+                columns=columns,
+                rows=rows,
+                chart_spec=chart_spec,
+            ),
         )
