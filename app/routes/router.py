@@ -10,6 +10,7 @@ from app.routes.uploads.route import router as uploads_router
 from app.routes.profiling.route import router as profiling_router
 from app.routes.preview.route import router as preview_router
 from app.routes.chat.route import router as chat_router
+from app.routes.analysis.route import router as analysis_router
 
 from app.routes.datasets.route import router as datasets_router
 
@@ -50,6 +51,11 @@ api_router.include_router(
 api_router.include_router(
     preview_router,
     tags=["Preview"],
+)
+
+api_router.include_router(
+    analysis_router,
+    tags=["Analysis"],
 )
 
 api_router.include_router(chat_router) 
