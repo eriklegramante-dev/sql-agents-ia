@@ -1,14 +1,14 @@
 from typing import Any
 from uuid import UUID
 
-from app.adapters.analysis.duckdb_query_adapter import (
-    DuckDBQueryAdapter,
+from app.core.analysis.contracts import (
+    AnalysisDatasetRepository,
+    AnalysisQueryExecutor,
+    SQLValidator,
 )
 from app.adapters.storage.base import StorageAdapter
-from app.analysis.sql_safety_validator import SQLSafetyValidator
-from app.database.dataset_repository import DatasetRepository
 from app.enums.dataset_status import DatasetStatus
-from app.logs.setup_logger import LOGGER, LoggerManager
+from app.logs.setup_logger import LoggerManager
 from app.prepare.exceptions import AppException
 from app.routes.analysis.dtos.dto import (
     AnalysisQueryRequestDTO,
@@ -59,17 +59,17 @@ class AnalysisQueryWorkflow:
 
     def __init__(
         self,
-        dataset_repository: DatasetRepository,
+        dataset_repository: AnalysisDatasetRepository,
         storage_adapter: StorageAdapter,
-        sql_validator: SQLSafetyValidator,
-        query_adapter: DuckDBQueryAdapter,
-        logger: LoggerManager | None = None,
+        sql_validator: SQLValidator,
+        query_adapter: AnalysisQueryExecutor,
+        logger: LoggerManager,
     ) -> None:
         self.dataset_repository = dataset_repository
         self.storage_adapter = storage_adapter
         self.sql_validator = sql_validator
         self.query_adapter = query_adapter
-        self.logger = logger or LOGGER
+        self.logger = logger
 
     async def execute(
         self,
@@ -95,11 +95,7 @@ class AnalysisQueryWorkflow:
                 has no prepared object, no executable SQL is available, or
                 the provided SQL query is unsafe.
 
-            RuntimeError:
-                If required workflow dependencies were not configured or the
-                analytical query adapter fails unexpectedly.
         """
-        self._validate_dependencies()
 
         normalized_limit = self._normalize_limit(request.limit)
 
@@ -153,34 +149,6 @@ class AnalysisQueryWorkflow:
         )
 
         return response_data
-
-    def _validate_dependencies(self) -> None:
-        """
-        Ensure all required workflow dependencies are configured.
-
-        Raises:
-            RuntimeError:
-                If any required dependency is missing.
-        """
-        if self.dataset_repository is None:
-            raise RuntimeError(
-                "Dataset repository dependency was not configured."
-            )
-
-        if self.storage_adapter is None:
-            raise RuntimeError(
-                "Storage adapter dependency was not configured."
-            )
-
-        if self.sql_validator is None:
-            raise RuntimeError(
-                "SQL safety validator dependency was not configured."
-            )
-
-        if self.query_adapter is None:
-            raise RuntimeError(
-                "Query adapter dependency was not configured."
-            )
 
     def _normalize_limit(
         self,

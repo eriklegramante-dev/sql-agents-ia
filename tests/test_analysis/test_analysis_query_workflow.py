@@ -30,11 +30,14 @@ class TestAnalysisQueryWorkflow:
 
         self.query_adapter = Mock()
 
+        self.logger = Mock()
+
         self.workflow = AnalysisQueryWorkflow(
             dataset_repository=self.dataset_repository,
             storage_adapter=self.storage_adapter,
             sql_validator=self.sql_validator,
             query_adapter=self.query_adapter,
+            logger=self.logger()
         )
 
     def _build_dataset(
