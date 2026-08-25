@@ -11,8 +11,7 @@ from app.analysis.sql_safety_validator import SQLSafetyValidator
 from app.core.analysis.workflow import AnalysisQueryWorkflow
 from app.enums.dataset_status import DatasetStatus
 from app.prepare.exceptions import AppException
-from app.routes.analysis.dtos.dto import AnalysisQueryRequestDTO
-
+from app.core.analysis.models import AnalysisQueryInput
 
 class TestAnalysisQueryWorkflow:
     def setup_method(self) -> None:
@@ -75,7 +74,7 @@ class TestAnalysisQueryWorkflow:
             returned_rows_count=2,
         )
 
-        request = AnalysisQueryRequestDTO(
+        request = AnalysisQueryInput(
             dataset_id=self.dataset_id,
             sql="SELECT id, name FROM dataset",
             limit=2,
@@ -121,7 +120,7 @@ class TestAnalysisQueryWorkflow:
     ) -> None:
         self.dataset_repository.get_by_id.return_value = None
 
-        request = AnalysisQueryRequestDTO(
+        request = AnalysisQueryInput(
             dataset_id=self.dataset_id,
             sql="SELECT * FROM dataset",
         )
@@ -147,7 +146,7 @@ class TestAnalysisQueryWorkflow:
 
         self.dataset_repository.get_by_id.return_value = dataset
 
-        request = AnalysisQueryRequestDTO(
+        request = AnalysisQueryInput(
             dataset_id=self.dataset_id,
             sql="SELECT * FROM dataset",
         )
@@ -173,7 +172,7 @@ class TestAnalysisQueryWorkflow:
 
         self.dataset_repository.get_by_id.return_value = dataset
 
-        request = AnalysisQueryRequestDTO(
+        request = AnalysisQueryInput(
             dataset_id=self.dataset_id,
             sql="SELECT * FROM dataset",
         )
@@ -195,7 +194,7 @@ class TestAnalysisQueryWorkflow:
 
         self.dataset_repository.get_by_id.return_value = dataset
 
-        request = AnalysisQueryRequestDTO(
+        request = AnalysisQueryInput(
             dataset_id=self.dataset_id,
             sql="DELETE FROM dataset",
         )
@@ -218,7 +217,7 @@ class TestAnalysisQueryWorkflow:
 
         self.dataset_repository.get_by_id.return_value = dataset
 
-        request = AnalysisQueryRequestDTO(
+        request = AnalysisQueryInput(
             dataset_id=self.dataset_id,
             question="What is the average score?",
         )
@@ -253,7 +252,7 @@ class TestAnalysisQueryWorkflow:
             returned_rows_count=1,
         )
 
-        request = AnalysisQueryRequestDTO(
+        request = AnalysisQueryInput(
             dataset_id=self.dataset_id,
             question="How many rows are there?",
             sql="SELECT COUNT(*) AS total FROM dataset",
@@ -291,7 +290,7 @@ class TestAnalysisQueryWorkflow:
             returned_rows_count=1,
         )
 
-        request = AnalysisQueryRequestDTO(
+        request = AnalysisQueryInput(
             dataset_id=self.dataset_id,
             sql="SELECT id FROM dataset;",
         )
@@ -319,7 +318,7 @@ class TestAnalysisQueryWorkflow:
             returned_rows_count=0,
         )
 
-        request = AnalysisQueryRequestDTO(
+        request = AnalysisQueryInput(
             dataset_id=self.dataset_id,
             sql="SELECT id FROM dataset",
         )

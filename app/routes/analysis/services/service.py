@@ -1,5 +1,6 @@
 from app.core.analysis.workflow import AnalysisQueryWorkflow
 from app.logs.setup_logger import LOGGER, LoggerManager
+from app.core.analysis.models import AnalysisQueryInput
 from app.routes.analysis.dtos.dto import (
     AnalysisQueryRequestDTO,
     AnalysisQueryResponseDataDTO,
@@ -47,10 +48,14 @@ class AnalysisQueryService:
 
     async def execute(
         self,
-        request: AnalysisQueryRequestDTO,
+        request: AnalysisQueryInput,
     ) -> AnalysisQueryResponseDataDTO:
         """
         Execute the dataset analysis query service.
+
+        Maps the HTTP request DTO to the core analysis input model, delegates
+        execution to the workflow, and maps the resulting core model back to
+        the HTTP response DTO.
 
         Args:
             request:
@@ -58,14 +63,31 @@ class AnalysisQueryService:
 
         Returns:
             AnalysisQueryResponseDataDTO:
-                Structured analytical result produced by the workflow.
+                Structured analytical result exposed by the API layer.
         """
         self.logger.log_info(
             f"Executing analysis query service for dataset "
             f"{request.dataset_id}."
         )
 
-        response_data = await self.workflow.execute(request)
+        workflow_request = AnalysisQueryInput(
+            dataset_id=request.dataset_id,
+            question=request.question,
+            sql=request.sql,
+            limit=request.limit,
+        )
+
+        result = await self.workflow.execute(workflow_request)
+
+        response_data = AnalysisQueryResponseDataDTO(
+            dataset_id=result.dataset_id,
+            executed_sql=result.executed_sql,
+            columns=result.columns,
+            rows=result.rows,
+            rows_count=result.rows_count,
+            returned_rows_count=result.returned_rows_count,
+            limit=result.limit,
+        )
 
         self.logger.log_info(
             f"Analysis query service completed for dataset "

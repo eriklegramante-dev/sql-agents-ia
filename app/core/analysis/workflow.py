@@ -10,9 +10,9 @@ from app.adapters.storage.base import StorageAdapter
 from app.enums.dataset_status import DatasetStatus
 from app.logs.setup_logger import LoggerManager
 from app.prepare.exceptions import AppException
-from app.routes.analysis.dtos.dto import (
-    AnalysisQueryRequestDTO,
-    AnalysisQueryResponseDataDTO,
+from app.core.analysis.models import (
+    AnalysisQueryInput,
+    AnalysisQueryOutput,
 )
 
 
@@ -73,8 +73,8 @@ class AnalysisQueryWorkflow:
 
     async def execute(
         self,
-        request: AnalysisQueryRequestDTO,
-    ) -> AnalysisQueryResponseDataDTO:
+        request: AnalysisQueryInput,
+    ) -> AnalysisQueryOutput:
         """
         Execute a safe analytical query against a prepared dataset.
 
@@ -133,7 +133,7 @@ class AnalysisQueryWorkflow:
             limit=normalized_limit,
         )
 
-        response_data = AnalysisQueryResponseDataDTO(
+        response_data = AnalysisQueryOutput(
             dataset_id=request.dataset_id,
             executed_sql=safe_sql,
             columns=query_result.columns,
@@ -266,7 +266,7 @@ class AnalysisQueryWorkflow:
 
     def _resolve_sql(
         self,
-        request: AnalysisQueryRequestDTO,
+        request: AnalysisQueryInput,
     ) -> str:
         """
         Resolve the SQL query that should be executed.
