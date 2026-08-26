@@ -37,10 +37,10 @@ class AnalysisQueryService:
     def __init__(
         self,
         workflow: AnalysisQueryWorkflow,
-        logger: LoggerManager | None = None,
+        logger: LoggerManager,
     ) -> None:
         self.workflow = workflow
-        self.logger = logger or LOGGER
+        self.logger = logger
 
     async def execute(
         self,

@@ -110,11 +110,6 @@ class AnalysisQueryResponseDTO(BaseModel):
     errors: list[Any] | None = None
 
 
-# ==========================================
-# CLASSES DA SUA BRANCH (Gráficos)
-# ==========================================
-
-
 class AnalysisChartRequestDTO(BaseModel):
     """
     Data transfer object representing a request to generate a chart.
@@ -123,7 +118,6 @@ class AnalysisChartRequestDTO(BaseModel):
     type, and axis field mappings) or a natural-language question that will be
     interpreted and converted into a chart execution plan.
     """
-
     dataset_id: UUID
     question: str | None = None
     sql: str | None = None
@@ -145,7 +139,6 @@ class AnalysisChartRequestDTO(BaseModel):
                 "('sql', 'chart_type', 'x_field', 'y_field')."
             )
         return self
-
 
 class ChartSpec(BaseModel):
     """
