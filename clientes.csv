@@ -1,3 +1,0 @@
-SELECT * FROM alembic_version;id,nome,email
-1,Joao,joao@email.com
-2,Maria,maria@email.com

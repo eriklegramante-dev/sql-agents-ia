@@ -3,13 +3,20 @@ import asyncpg
 from app.adapters.storage.base import StorageAdapter
 from app.adapters.storage.blob_storage_adapter import BlobStorageAdapter
 from app.adapters.storage.local_storage_adapter import LocalStorageAdapter
-from app.database.dataset_repository import DatasetRepository
-from app.routes.prepare.controllers.controller import DatasetPreparationController
-from app.routes.prepare.services.service import DatasetPreparationService
+from app.adapters.storage.minio_blob_storage_adapter import (
+    MinioBlobStorageAdapter,
+)
+from app.adapters.storage.minio_multipart_client_adapter import (
+    MinioMultipartClientAdapter,
+)
+from app.connections.minio import get_minio_client
 from app.core.prepare.workflow import DatasetPreparationWorkflow
+from app.database.dataset_repository import DatasetRepository
+from app.routes.prepare.controllers.controller import (
+    DatasetPreparationController,
+)
+from app.routes.prepare.services.service import DatasetPreparationService
 from app.settings.setting import get_settings
-
-_db_pool: asyncpg.Pool | None = None
 
 
 async def get_db_pool() -> asyncpg.Pool:
@@ -57,17 +64,31 @@ async def get_dataset_repository() -> DatasetRepository:
 
 async def get_storage_adapter() -> StorageAdapter:
     """
-    Builds the storage adapter dependency.
+    Build the storage adapter dependency.
 
     Selects the configured storage backend and returns an adapter that
     implements the StorageAdapter contract.
 
     Returns:
         StorageAdapter:
-            Azure Blob Storage adapter when configured, otherwise local
-            filesystem storage adapter.
+            MinIO storage adapter when configured, Azure Blob Storage adapter
+            when configured, otherwise the local filesystem storage adapter.
     """
     settings = get_settings()
+
+    if settings.storage.storage_type == "minio":
+        minio_client = get_minio_client(settings=settings)
+
+        multipart_client = MinioMultipartClientAdapter(
+            client=minio_client,
+        )
+
+        return MinioBlobStorageAdapter(
+            client=minio_client,
+            multipart_client=multipart_client,
+            bucket_name=settings.minio.bucket_name,
+            signed_url_expires_seconds=(settings.upload.signed_url_expires_seconds),
+        )
 
     if settings.storage.storage_type == "azure":
         return BlobStorageAdapter(settings.storage.azure_storage_connection_string)

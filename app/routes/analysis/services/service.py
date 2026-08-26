@@ -2,17 +2,12 @@
 Analysis service implementation.
 
 Orchestrates chart planning, analytical query generation, SQL security
-validation, and chart specification construction.
+validation, and chart specification construction, as well as delegating
+data queries to the analysis workflow.
 """
-
 
 from app.enums.chart_type import ChartType
 from app.enums.dataset_status import DatasetStatus
-from app.routes.analysis.dtos.dto import (
-    AnalysisChartDataDTO,
-    AnalysisChartRequestDTO,
-    AnalysisChartResponseDTO,
-)
 from app.routes.analysis.helpers.chart_builder import ChartSpecBuilder
 from app.routes.analysis.helpers.chart_planner import ChartPlannerTool
 from app.routes.analysis.protocols import (
@@ -20,14 +15,70 @@ from app.routes.analysis.protocols import (
     QueryAdapterProtocol,
 )
 from app.security.sql_validator import validate_safe_select_query
+from app.routes.analysis.dtos.dto import (
+    AnalysisChartDataDTO,
+    AnalysisChartRequestDTO,
+    AnalysisChartResponseDTO,
+    AnalysisQueryRequestDTO,
+    AnalysisQueryResponseDataDTO,
+)
+
+from app.core.analysis.workflow import AnalysisQueryWorkflow
+from app.logs.setup_logger import LOGGER, LoggerManager
+from app.core.analysis.models import AnalysisQueryInput
+
+
+class AnalysisQueryService:
+    """
+    Coordinates dataset analysis query execution at the service layer.
+    (Implementação vinda da branch dev)
+    """
+
+    def __init__(
+        self,
+        workflow: AnalysisQueryWorkflow,
+        logger: LoggerManager | None = None,
+    ) -> None:
+        self.workflow = workflow
+        self.logger = logger or LOGGER
+
+    async def execute(
+        self,
+        request: AnalysisQueryInput,
+    ) -> AnalysisQueryResponseDataDTO:
+        self.logger.log_info(
+            f"Executing analysis query service for dataset " f"{request.dataset_id}."
+        )
+
+        workflow_request = AnalysisQueryInput(
+            dataset_id=request.dataset_id,
+            question=request.question,
+            sql=request.sql,
+            limit=request.limit,
+        )
+
+        result = await self.workflow.execute(workflow_request)
+
+        response_data = AnalysisQueryResponseDataDTO(
+            dataset_id=result.dataset_id,
+            executed_sql=result.executed_sql,
+            columns=result.columns,
+            rows=result.rows,
+            rows_count=result.rows_count,
+            returned_rows_count=result.returned_rows_count,
+            limit=result.limit,
+        )
+
+        self.logger.log_info(
+            f"Analysis query service completed for dataset " f"{request.dataset_id}."
+        )
+
+        return response_data
 
 
 class AnalysisService:
     """
     Application service managing analytical chart generation.
-
-    Coordinates dataset state verification, natural language query planning,
-    safe SQL validation, execution via query adapters, and spec assembly.
     """
 
     def __init__(
@@ -36,17 +87,6 @@ class AnalysisService:
         query_adapter: QueryAdapterProtocol,
         planner_tool: ChartPlannerTool,
     ) -> None:
-        """
-        Initializes the analysis service with mandatory dependencies.
-
-        Args:
-            dataset_repo (DatasetRepositoryProtocol):
-                Repository instance satisfying the persistence contract.
-            query_adapter (QueryAdapterProtocol):
-                Adapter instance executing analytical SQL statements.
-            planner_tool (ChartPlannerTool):
-                Planner tool used for natural language chart inference.
-        """
         self._dataset_repo = dataset_repo
         self._query_adapter = query_adapter
         self._planner_tool = planner_tool
@@ -55,25 +95,6 @@ class AnalysisService:
         self,
         payload: AnalysisChartRequestDTO,
     ) -> AnalysisChartResponseDTO:
-        """
-        Generates chart specifications and execution data for a given dataset.
-
-        Validates the dataset preparation status, processes either an explicit
-        SQL statement or a natural language question, validates axis mapping,
-        and builds the complete chart response DTO.
-
-        Args:
-            payload (AnalysisChartRequestDTO):
-                Chart generation request parameters.
-
-        Returns:
-            AnalysisChartResponseDTO:
-                Structured response with operation status, message, and chart data.
-
-        Raises:
-            ValueError:
-                If SQL fails safe validation checks or axis fields are missing.
-        """
         dataset = await self._dataset_repo.find_by_id(payload.dataset_id)
         if not dataset:
             return AnalysisChartResponseDTO(
@@ -150,7 +171,11 @@ class AnalysisService:
             message="Chart generated successfully.",
             data=AnalysisChartDataDTO(
                 dataset_id=payload.dataset_id,
-                chart_type=target_type.value if hasattr(target_type, "value") else str(target_type),
+                chart_type=(
+                    target_type.value
+                    if hasattr(target_type, "value")
+                    else str(target_type)
+                ),
                 title=title,
                 executed_sql=target_sql,
                 x_field=resolved_x,

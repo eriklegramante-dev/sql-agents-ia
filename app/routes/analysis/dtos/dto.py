@@ -1,14 +1,118 @@
 """
-Data transfer objects representing chart requests and analytical responses.
+Data transfer objects representing chart requests, analytical queries, and responses.
 
-Defines validation boundaries and payload contracts for dataset chart endpoints.
+Defines validation boundaries and payload contracts for dataset analysis endpoints.
 """
 
+from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.enums.chart_type import ChartType
+
+
+class AnalysisQueryRequestDTO(BaseModel):
+    """
+    Represents an incoming dataset analysis query request.
+
+    The request allows the client to submit either a natural-language
+    question, a direct SQL query, or both. When both values are provided,
+    the analysis workflow must prioritize the direct SQL query.
+
+    At least one of ``question`` or ``sql`` must be provided.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    dataset_id: UUID = Field(
+        ...,
+        description="Unique identifier of the dataset to be analyzed.",
+    )
+    question: str | None = Field(
+        default=None,
+        description=(
+            "Optional natural-language analytical question to execute "
+            "against the dataset."
+        ),
+    )
+    sql: str | None = Field(
+        default=None,
+        description=(
+            "Optional direct read-only SQL query to execute against " "the dataset."
+        ),
+    )
+    limit: int = Field(
+        default=20,
+        ge=1,
+        le=100,
+        description="Maximum number of rows returned by the analysis query.",
+    )
+
+    @field_validator("question", "sql", mode="before")
+    @classmethod
+    def normalize_optional_query_value(
+        cls,
+        value: Any,
+    ) -> str | None:
+        if value is None:
+            return None
+
+        if not isinstance(value, str):
+            raise ValueError("Query values must be strings.")
+
+        normalized_value = value.strip()
+
+        if not normalized_value:
+            return None
+
+        return normalized_value
+
+    @field_validator("limit", mode="before")
+    @classmethod
+    def normalize_limit(
+        cls,
+        value: Any,
+    ) -> int:
+        if value is None or value == "":
+            return 20
+        return int(value)
+
+    @model_validator(mode="after")
+    def validate_query_input(self) -> "AnalysisQueryRequestDTO":
+        if self.question is None and self.sql is None:
+            raise ValueError("At least one of 'question' or 'sql' must be provided.")
+        return self
+
+
+class AnalysisQueryResponseDataDTO(BaseModel):
+    """
+    Represents the dataset analysis query result.
+    """
+
+    dataset_id: UUID
+    executed_sql: str
+    columns: list[str] = Field(default_factory=list)
+    rows: list[dict[str, Any]] = Field(default_factory=list)
+    rows_count: int
+    returned_rows_count: int
+    limit: int
+
+
+class AnalysisQueryResponseDTO(BaseModel):
+    """
+    Represents the standardized API response for dataset analysis queries.
+    """
+
+    success: bool
+    message: str
+    data: AnalysisQueryResponseDataDTO | None = None
+    errors: list[Any] | None = None
+
+
+# ==========================================
+# CLASSES DA SUA BRANCH (Gráficos)
+# ==========================================
 
 
 class AnalysisChartRequestDTO(BaseModel):
@@ -18,22 +122,6 @@ class AnalysisChartRequestDTO(BaseModel):
     Accepts either an explicit visualization specification (SQL query, chart
     type, and axis field mappings) or a natural-language question that will be
     interpreted and converted into a chart execution plan.
-
-    Attributes:
-        dataset_id (UUID):
-            Unique identifier of the target dataset.
-        question (str | None):
-            Natural-language question used to infer the chart execution plan.
-        sql (str | None):
-            Explicit read-only SELECT analytical query.
-        chart_type (ChartType | None):
-            Supported chart visualization type (bar, line, pie, table).
-        x_field (str | None):
-            Name of the column mapped to the horizontal axis or category.
-        y_field (str | None):
-            Name of the column mapped to the vertical axis or metric.
-        limit (int):
-            Maximum number of records to return from the analytical execution.
     """
 
     dataset_id: UUID
@@ -46,22 +134,6 @@ class AnalysisChartRequestDTO(BaseModel):
 
     @model_validator(mode="after")
     def validate_inputs(self) -> "AnalysisChartRequestDTO":
-        """
-        Validates whether sufficient input parameters were provided.
-
-        Ensures that the client supplied either a valid non-empty natural-language
-        question or a complete explicit chart definition comprising SQL, chart
-        type, x_field, and y_field.
-
-        Returns:
-            AnalysisChartRequestDTO:
-                The validated request DTO instance.
-
-        Raises:
-            ValueError:
-                If neither a question nor the complete set of explicit chart
-                parameters is provided.
-        """
         has_explicit = bool(
             self.sql and self.chart_type and self.x_field and self.y_field
         )
@@ -78,20 +150,6 @@ class AnalysisChartRequestDTO(BaseModel):
 class ChartSpec(BaseModel):
     """
     Structured frontend-friendly chart specification.
-
-    Attributes:
-        type (str):
-            Type of visual representation (e.g., bar, line, pie, table).
-        title (str):
-            Descriptive title for the chart visualization.
-        x_field (str | None):
-            Dimension or category field mapped to the X axis.
-        y_field (str | None):
-            Metric or numeric field mapped to the Y axis.
-        series (list[str]):
-            List of series names present in the chart data.
-        data (list[dict[str, object]]):
-            List of structured data points containing the mapped values.
     """
 
     type: str
@@ -105,26 +163,6 @@ class ChartSpec(BaseModel):
 class AnalysisChartDataDTO(BaseModel):
     """
     Structured analytical payload returned upon successful chart generation.
-
-    Attributes:
-        dataset_id (UUID):
-            Identifier of the analyzed dataset.
-        chart_type (str):
-            Resolved chart visualization type.
-        title (str):
-            Resolved title of the chart.
-        executed_sql (str):
-            Analytical SQL statement executed against the dataset.
-        x_field (str | None):
-            Field mapped to the X axis or category dimension.
-        y_field (str | None):
-            Field mapped to the Y axis or metric dimension.
-        columns (list[str]):
-            List of column names returned by the executed query.
-        rows (list[dict[str, object]]):
-            Raw row records retrieved during execution.
-        chart_spec (ChartSpec):
-            Frontend-ready structured chart configuration and data.
     """
 
     dataset_id: UUID
@@ -141,14 +179,6 @@ class AnalysisChartDataDTO(BaseModel):
 class AnalysisChartResponseDTO(BaseModel):
     """
     Standardized API response DTO for dataset chart operations.
-
-    Attributes:
-        success (bool):
-            Indicates whether the chart generation operation succeeded.
-        message (str):
-            Descriptive message summarizing the operation outcome or error.
-        data (AnalysisChartDataDTO | None):
-            Generated chart and query payload when the operation succeeds.
     """
 
     success: bool

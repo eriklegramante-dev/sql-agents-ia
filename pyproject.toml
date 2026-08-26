@@ -18,7 +18,8 @@ dependencies = [
     "pydantic-settings (>=2.14.2,<3.0.0)",
     "azure-storage-blob (>=12.30.0,<13.0.0)",
     "sentry-sdk (>=2.63.0,<3.0.0)",
-    "minio (>=7.2.20,<8.0.0)"
+    "minio (>=7.2.20,<8.0.0)",
+    "duckdb (>=1.5.5,<2.0.0)",
 ]
 
 

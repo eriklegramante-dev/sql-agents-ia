@@ -9,18 +9,8 @@ from app.prepare.exceptions import NotFoundException
 class DatasetWorkflow:
     """Workflow responsible for retrieving dataset metadata.
 
-    The workflow belongs to the core layer and therefore depends only on
-    core abstractions and domain/application models. HTTP DTOs and concrete
-    persistence implementations are intentionally kept outside this layer.
-
-    Attributes:
-        repository: Repository abstraction used to retrieve dataset metadata.
-        logger: Logger used to record workflow execution events.
-
-    Args:
-        dataset_repository: Repository implementation injected by the
-            application composition layer.
-        logger: Logger instance used by this workflow.
+    The workflow belongs to the core layer and depends only on the dataset
+    repository abstraction and domain models.
     """
 
     def __init__(
@@ -28,7 +18,7 @@ class DatasetWorkflow:
         dataset_repository: DatasetRepository,
         logger: LoggerManager | None = None,
     ) -> None:
-        """Initialize the dataset workflow.
+        """Initialize the dataset retrieval workflow.
 
         Args:
             dataset_repository:

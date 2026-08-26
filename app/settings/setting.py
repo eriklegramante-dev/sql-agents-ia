@@ -95,7 +95,7 @@ class StorageSettings(BaseSettings):
 
 
 class SecuritySettings(BaseSettings):
-    secret_key: str 
+    secret_key: str
 
     model_config = {
         "env_prefix": "SECURITY_",

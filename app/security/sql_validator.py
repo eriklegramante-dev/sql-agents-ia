@@ -10,9 +10,9 @@ import re
 DANGEROUS_SQL_PATTERNS = [
     r"\b(INSERT|UPDATE|DELETE|DROP|ALTER|TRUNCATE|CREATE|REPLACE)\b",
     r"\b(GRANT|REVOKE|EXEC|EXECUTE|DECLARE|CALL)\b",
-    r";",  
-    r"--", 
-    r"/\*.*?\*/", 
+    r";",
+    r"--",
+    r"/\*.*?\*/",
 ]
 
 
