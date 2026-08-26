@@ -163,7 +163,7 @@ class UploadCompleteRequestDTO(BaseModel):
         parts: Uploaded parts used to create the request instance.
     """
 
-    dataset_id: UUID 
+    dataset_id: UUID
     upload_id: str = Field(..., min_length=1)
     parts: list[UploadPartDTO] = Field(..., min_length=1)
 
@@ -186,7 +186,7 @@ class UploadCompleteResponseDataDTO(BaseModel):
         completed_parts_count: Completed parts count used to create the response data.
     """
 
-    dataset_id: UUID 
+    dataset_id: UUID
     upload_id: str
     status: str
     object_key: str
@@ -224,7 +224,7 @@ class UploadAbortRequestDTO(BaseModel):
         upload_id: Upload identifier used to create the request instance.
     """
 
-    dataset_id: UUID 
+    dataset_id: UUID
     upload_id: str = Field(..., min_length=1)
 
 

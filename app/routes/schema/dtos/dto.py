@@ -16,6 +16,7 @@ class DatasetSchemaRequestDTO(BaseModel):
         description="Unique identifier of the dataset.",
     )
 
+
 class DatasetSchemaColumnDTO(BaseModel):
     """Represents the inferred schema information for a dataset column.
 

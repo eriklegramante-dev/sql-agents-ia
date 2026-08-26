@@ -48,9 +48,7 @@ class QualityChecker:
             null_percentage = self._calculate_percentage(null_count, rows_count)
 
             if rows_count > 0 and null_percentage >= 80:
-                warnings.append(
-                    f"Column '{column_name}' has a high null percentage."
-                )
+                warnings.append(f"Column '{column_name}' has a high null percentage.")
 
             if cardinality == 0:
                 warnings.append(f"Column '{column_name}' is empty.")

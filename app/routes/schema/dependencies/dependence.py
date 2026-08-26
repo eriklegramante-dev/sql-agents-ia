@@ -7,7 +7,6 @@ from app.routes.schema.controllers.controller import DatasetSchemaController
 from app.routes.schema.services.service import DatasetSchemaService
 from app.settings.setting import get_settings
 
-
 _db_pool: asyncpg.Pool | None = None
 
 
@@ -71,10 +70,7 @@ async def get_dataset_schema_controller() -> DatasetSchemaController:
         dataset_repository=repository,
         logger=LOGGER,
     )
-    service = DatasetSchemaService(
-        workflow=workflow,
-        logger=LOGGER
-    )
+    service = DatasetSchemaService(workflow=workflow, logger=LOGGER)
 
     return DatasetSchemaController(
         service=service,

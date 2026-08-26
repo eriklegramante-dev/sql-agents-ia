@@ -235,9 +235,7 @@ class AnalysisQueryWorkflow:
 
         if normalized_status not in allowed_statuses:
             raise AppException(
-                message=(
-                    "Dataset must be prepared or profiled before analysis."
-                ),
+                message=("Dataset must be prepared or profiled before analysis."),
                 status_code=409,
             )
 
@@ -258,9 +256,7 @@ class AnalysisQueryWorkflow:
         """
         if not prepared_object_key:
             raise AppException(
-                message=(
-                    "Dataset does not have a prepared object available."
-                ),
+                message=("Dataset does not have a prepared object available."),
                 status_code=409,
             )
 
@@ -302,9 +298,7 @@ class AnalysisQueryWorkflow:
             )
 
         raise AppException(
-            message=(
-                "At least one of 'question' or 'sql' must be provided."
-            ),
+            message=("At least one of 'question' or 'sql' must be provided."),
             status_code=422,
         )
 

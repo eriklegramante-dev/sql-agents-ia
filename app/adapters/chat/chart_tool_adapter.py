@@ -4,7 +4,6 @@ from uuid import UUID
 from app.chat.exceptions import ChartGenerationException
 from app.chat.models import ChatArtifact, ChartResult
 
-
 ChartExecutor = Callable[
     [UUID, str],
     Awaitable[ChartResult],
@@ -33,7 +32,6 @@ class ChartToolAdapter:
             Asynchronous callable responsible for generating structured chart
             data from a dataset identifier and a user request.
     """
-
 
     def __init__(
         self,
@@ -75,9 +73,7 @@ class ChartToolAdapter:
         )
 
         if not result:
-            raise ChartGenerationException(
-                "The chart generation returned no result."
-            )
+            raise ChartGenerationException("The chart generation returned no result.")
 
         return ChatArtifact(
             type="chart",

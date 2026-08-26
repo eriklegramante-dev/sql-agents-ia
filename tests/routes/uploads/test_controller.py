@@ -27,9 +27,7 @@ class FakeUploadService:
     ) -> dict:
 
         if self.should_fail:
-            raise ValueError(
-                "Invalid upload request."
-            )
+            raise ValueError("Invalid upload request.")
 
         return {
             "dataset_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
@@ -45,7 +43,6 @@ class FakeUploadService:
                 }
             ],
         }
-
 
     async def complete_upload(
         self,
@@ -70,7 +67,6 @@ class FakeUploadService:
             "object_key": f"datasets/{dataset_id}/raw/file.csv",
             "completed_parts_count": len(parts),
         }
-
 
 
 def make_request() -> UploadInitRequestDTO:
@@ -101,51 +97,35 @@ def make_complete_request() -> UploadCompleteRequestDTO:
 @pytest.mark.asyncio
 async def test_initialize_upload_returns_success_response() -> None:
 
-    controller = UploadController(
-        service=FakeUploadService()
-    )
+    controller = UploadController(service=FakeUploadService())
 
     request = make_request()
 
-    response = await controller.initialize_upload(
-        request
-    )
+    response = await controller.initialize_upload(request)
 
     assert isinstance(
         response,
         JSONResponse,
     )
 
-    assert (
-        response.status_code
-        == status.HTTP_201_CREATED
-    )
+    assert response.status_code == status.HTTP_201_CREATED
 
 
 @pytest.mark.asyncio
 async def test_initialize_upload_returns_bad_request_on_value_error() -> None:
 
-    controller = UploadController(
-        service=FakeUploadService(
-            should_fail=True
-        )
-    )
+    controller = UploadController(service=FakeUploadService(should_fail=True))
 
     request = make_request()
 
-    response = await controller.initialize_upload(
-        request
-    )
+    response = await controller.initialize_upload(request)
 
     assert isinstance(
         response,
         JSONResponse,
     )
 
-    assert (
-        response.status_code
-        == status.HTTP_400_BAD_REQUEST
-    )
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
 class FakeAbortService:
@@ -164,7 +144,6 @@ class FakeAbortService:
         }
 
 
-
 class FakeFailAbortService:
 
     async def abort_upload(
@@ -173,10 +152,7 @@ class FakeFailAbortService:
         upload_id: str,
     ) -> dict:
 
-        raise ValueError(
-            "Upload cannot be aborted"
-        )
-
+        raise ValueError("Upload cannot be aborted")
 
 
 def make_abort_request():
@@ -191,55 +167,38 @@ def make_abort_request():
     )()
 
 
-
 @pytest.mark.asyncio
 async def test_abort_upload_controller_success() -> None:
 
-    controller = UploadController(
-        service=FakeAbortService()
-    )
+    controller = UploadController(service=FakeAbortService())
 
     request = make_abort_request()
 
-    response = await controller.abort_upload(
-        request
-    )
+    response = await controller.abort_upload(request)
 
     assert isinstance(
         response,
         JSONResponse,
     )
 
-    assert (
-        response.status_code
-        == status.HTTP_200_OK
-    )
-
+    assert response.status_code == status.HTTP_200_OK
 
 
 @pytest.mark.asyncio
 async def test_abort_upload_controller_failure() -> None:
 
-    controller = UploadController(
-        service=FakeFailAbortService()
-    )
+    controller = UploadController(service=FakeFailAbortService())
 
     request = make_abort_request()
 
-    response = await controller.abort_upload(
-        request
-    )
+    response = await controller.abort_upload(request)
 
     assert isinstance(
         response,
         JSONResponse,
     )
 
-    assert (
-        response.status_code
-        == status.HTTP_400_BAD_REQUEST
-    )
-
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
 @pytest.mark.asyncio
@@ -247,20 +206,13 @@ async def test_complete_upload_returns_success_response() -> None:
 
     service = FakeUploadService()
 
-    controller = UploadController(
-        service=service
-    )
+    controller = UploadController(service=service)
 
     request = make_complete_request()
 
-    response = await controller.complete_upload(
-        request
-    )
+    response = await controller.complete_upload(request)
 
-    assert (
-        response.status_code
-        == status.HTTP_200_OK
-    )
+    assert response.status_code == status.HTTP_200_OK
 
     assert str(service.completed_upload["dataset_id"]) == (
         "3fa85f64-5717-4562-b3fc-2c963f66afa6"
@@ -276,35 +228,28 @@ async def test_complete_upload_returns_success_response() -> None:
     ]
 
 
-
 @pytest.mark.asyncio
-async def test_complete_upload_returns_bad_request_when_service_raises_value_error() -> None:
+async def test_complete_upload_returns_bad_request_when_service_raises_value_error() -> (
+    None
+):
 
     service = FakeUploadService()
 
-    service.complete_error = ValueError(
-        "Invalid completion request."
-    )
+    service.complete_error = ValueError("Invalid completion request.")
 
-    controller = UploadController(
-        service=service
-    )
+    controller = UploadController(service=service)
 
     request = make_complete_request()
 
-    response = await controller.complete_upload(
-        request
-    )
+    response = await controller.complete_upload(request)
 
-    assert (
-        response.status_code
-        == status.HTTP_400_BAD_REQUEST
-    )
-
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
 @pytest.mark.asyncio
-async def test_complete_upload_returns_bad_gateway_when_service_raises_completion_error() -> None:
+async def test_complete_upload_returns_bad_gateway_when_service_raises_completion_error() -> (
+    None
+):
 
     service = FakeUploadService()
 
@@ -312,22 +257,15 @@ async def test_complete_upload_returns_bad_gateway_when_service_raises_completio
         "Upload completion failed in object storage."
     )
 
-    controller = UploadController(
-        service=service
-    )
+    controller = UploadController(service=service)
 
     request = make_complete_request()
 
-    response = await controller.complete_upload(
-        request
-    )
+    response = await controller.complete_upload(request)
 
     assert isinstance(
         response,
         JSONResponse,
     )
 
-    assert (
-        response.status_code
-        == status.HTTP_502_BAD_GATEWAY
-    )
+    assert response.status_code == status.HTTP_502_BAD_GATEWAY

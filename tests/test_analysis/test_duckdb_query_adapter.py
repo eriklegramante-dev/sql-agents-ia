@@ -94,11 +94,7 @@ class TestDuckDBQueryAdapter:
 
         result = self.adapter.execute(
             parquet_content=parquet_content,
-            sql=(
-                "SELECT score, created_at "
-                "FROM dataset "
-                "WHERE id = 1"
-            ),
+            sql=("SELECT score, created_at " "FROM dataset " "WHERE id = 1"),
             limit=10,
         )
 

@@ -10,7 +10,6 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
-
 revision = "0001"
 down_revision = None
 branch_labels = None
@@ -18,10 +17,8 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.execute(
-    'CREATE EXTENSION IF NOT EXISTS "pgcrypto"'
-    )    
-    
+    op.execute('CREATE EXTENSION IF NOT EXISTS "pgcrypto"')
+
     dataset_status_enum = postgresql.ENUM(
         "UPLOADING",
         "COMPLETED",
@@ -51,7 +48,7 @@ def upgrade() -> None:
             "filename",
             sa.String(length=255),
             nullable=True,
-        ),        
+        ),
         sa.Column(
             "status",
             dataset_status_enum,
@@ -87,7 +84,7 @@ def upgrade() -> None:
             "content_type",
             sa.String(length=100),
             nullable=True,
-        ),        
+        ),
         sa.Column(
             "file_size_bytes",
             sa.Integer(),
@@ -211,9 +208,7 @@ def downgrade() -> None:
     op.drop_table("dataset_schemas")
     op.drop_table("datasets")
 
-    dataset_status_enum = postgresql.ENUM(
-        name="dataset_status"
-    )
+    dataset_status_enum = postgresql.ENUM(name="dataset_status")
 
     dataset_status_enum.drop(
         op.get_bind(),

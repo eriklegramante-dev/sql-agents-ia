@@ -6,7 +6,11 @@ import pandas as pd
 
 from app.core.profiling.workflow import DatasetProfileWorkflow
 from app.enums.dataset_status import DatasetStatus
-from app.prepare.exceptions import ConflictException, NotFoundException, ProcessingException
+from app.prepare.exceptions import (
+    ConflictException,
+    NotFoundException,
+    ProcessingException,
+)
 from tests.helpers import DATASET_ID, FakeStorage, FixedDatetime, make_dataset
 
 
@@ -115,7 +119,9 @@ class DatasetProfileWorkflowTest(unittest.IsolatedAsyncioTestCase):
             ],
         )
         self.assertEqual(repository.saved_profile, (DATASET_ID, calculator.profile))
-        self.assertEqual(calculator.received_dataframe.columns.tolist(), ["amount", "paid"])
+        self.assertEqual(
+            calculator.received_dataframe.columns.tolist(), ["amount", "paid"]
+        )
 
     async def test_execute_fails_when_dataset_does_not_exist(self):
         workflow = DatasetProfileWorkflow(
@@ -129,7 +135,9 @@ class DatasetProfileWorkflowTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_execute_rejects_dataset_that_is_not_prepared(self):
         repository = FakeProfileRepository(make_dataset(status=DatasetStatus.COMPLETED))
-        workflow = DatasetProfileWorkflow(repository, FakeStorage(), FakeProfileCalculator())
+        workflow = DatasetProfileWorkflow(
+            repository, FakeStorage(), FakeProfileCalculator()
+        )
 
         with self.assertRaises(ConflictException):
             await workflow.execute(DATASET_ID)
@@ -140,7 +148,9 @@ class DatasetProfileWorkflowTest(unittest.IsolatedAsyncioTestCase):
         repository = FakeProfileRepository(
             make_dataset(status=DatasetStatus.PREPARED, prepared_object_key=None)
         )
-        workflow = DatasetProfileWorkflow(repository, FakeStorage(), FakeProfileCalculator())
+        workflow = DatasetProfileWorkflow(
+            repository, FakeStorage(), FakeProfileCalculator()
+        )
 
         with self.assertRaises(ConflictException):
             await workflow.execute(DATASET_ID)
@@ -154,7 +164,9 @@ class DatasetProfileWorkflowTest(unittest.IsolatedAsyncioTestCase):
                 prepared_object_key=f"{DATASET_ID}/missing.parquet",
             )
         )
-        workflow = DatasetProfileWorkflow(repository, FakeStorage(), FakeProfileCalculator())
+        workflow = DatasetProfileWorkflow(
+            repository, FakeStorage(), FakeProfileCalculator()
+        )
 
         with self.assertRaises(ProcessingException):
             await workflow.execute(DATASET_ID)

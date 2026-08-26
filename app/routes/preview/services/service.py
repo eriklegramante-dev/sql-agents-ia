@@ -27,7 +27,7 @@ class DatasetPreviewService:
         workflow: DatasetPreviewWorkflow,
         logger: LoggerManager | None = None,
     ) -> None:
-        self.workflow = workflow 
+        self.workflow = workflow
         self.logger = logger or LOGGER
 
     async def execute(
@@ -35,15 +35,13 @@ class DatasetPreviewService:
         request: DatasetPreviewRequestDTO,
     ) -> DatasetPreviewResponseDataDTO:
         self.logger.log_info(
-            f"Executing dataset preview service for dataset "
-            f"{request.dataset_id}."
+            f"Executing dataset preview service for dataset " f"{request.dataset_id}."
         )
 
         response_data = await self.workflow.execute(request)
 
         self.logger.log_info(
-            f"Dataset preview service completed for dataset "
-            f"{request.dataset_id}."
+            f"Dataset preview service completed for dataset " f"{request.dataset_id}."
         )
 
         return response_data

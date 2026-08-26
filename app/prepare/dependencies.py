@@ -87,19 +87,13 @@ async def get_storage_adapter() -> StorageAdapter:
             client=minio_client,
             multipart_client=multipart_client,
             bucket_name=settings.minio.bucket_name,
-            signed_url_expires_seconds=(
-                settings.upload.signed_url_expires_seconds
-            ),
+            signed_url_expires_seconds=(settings.upload.signed_url_expires_seconds),
         )
 
     if settings.storage.storage_type == "azure":
-        return BlobStorageAdapter(
-            settings.storage.azure_storage_connection_string
-        )
+        return BlobStorageAdapter(settings.storage.azure_storage_connection_string)
 
-    return LocalStorageAdapter(
-        settings.storage.local_storage_path
-    )
+    return LocalStorageAdapter(settings.storage.local_storage_path)
 
 
 async def get_dataset_preparation_controller() -> DatasetPreparationController:

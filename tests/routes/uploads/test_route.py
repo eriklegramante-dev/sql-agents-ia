@@ -136,9 +136,7 @@ def test_complete_upload_route_success(client) -> None:
                 },
             )
 
-    app.dependency_overrides[get_upload_controller] = (
-        lambda: FakeUploadController()
-    )
+    app.dependency_overrides[get_upload_controller] = lambda: FakeUploadController()
 
     try:
         response = client.post(
@@ -157,7 +155,6 @@ def test_complete_upload_route_success(client) -> None:
 
     finally:
         app.dependency_overrides.clear()
-
 
     assert response.status_code == 200
 

@@ -136,7 +136,9 @@ class ProfileDatasetRouteTest(unittest.TestCase):
         self.assertEqual(response_json["detail"][0]["loc"], ["path", "dataset_id"])
 
     def test_profile_dataset_returns_not_found_when_dataset_does_not_exist(self):
-        controller = FakeProfileController(exception=NotFoundException("Dataset not found."))
+        controller = FakeProfileController(
+            exception=NotFoundException("Dataset not found.")
+        )
         self.override_controller(controller)
 
         status_code, response_json = post(f"/api/v1/datasets/{DATASET_ID}/profile")

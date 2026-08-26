@@ -1,0 +1,1 @@
+"""Analysis route module package."""

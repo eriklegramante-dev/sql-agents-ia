@@ -13,6 +13,7 @@ from app.enums.dataset_status import DatasetStatus
 from app.prepare.exceptions import AppException
 from app.core.analysis.models import AnalysisQueryInput
 
+
 class TestAnalysisQueryWorkflow:
     def setup_method(self) -> None:
         self.dataset_id = uuid4()
@@ -21,9 +22,7 @@ class TestAnalysisQueryWorkflow:
         self.dataset_repository.get_by_id = AsyncMock()
 
         self.storage_adapter = Mock()
-        self.storage_adapter.read_file = AsyncMock(
-            return_value=b"parquet-content"
-        )
+        self.storage_adapter.read_file = AsyncMock(return_value=b"parquet-content")
 
         self.sql_validator = SQLSafetyValidator()
 
@@ -36,7 +35,7 @@ class TestAnalysisQueryWorkflow:
             storage_adapter=self.storage_adapter,
             sql_validator=self.sql_validator,
             query_adapter=self.query_adapter,
-            logger=self.logger()
+            logger=self.logger(),
         )
 
     def _build_dataset(
@@ -99,9 +98,7 @@ class TestAnalysisQueryWorkflow:
         assert result.returned_rows_count == 2
         assert result.limit == 2
 
-        self.dataset_repository.get_by_id.assert_awaited_once_with(
-            self.dataset_id
-        )
+        self.dataset_repository.get_by_id.assert_awaited_once_with(self.dataset_id)
 
         self.storage_adapter.read_file.assert_awaited_once_with(
             container="prepared",
@@ -129,9 +126,7 @@ class TestAnalysisQueryWorkflow:
             await self.workflow.execute(request)
 
         assert error.value.status_code == 404
-        assert error.value.message == (
-            f"Dataset {self.dataset_id} was not found."
-        )
+        assert error.value.message == (f"Dataset {self.dataset_id} was not found.")
 
         self.storage_adapter.read_file.assert_not_awaited()
         self.query_adapter.execute.assert_not_called()
@@ -203,9 +198,7 @@ class TestAnalysisQueryWorkflow:
             await self.workflow.execute(request)
 
         assert error.value.status_code == 422
-        assert error.value.message == (
-            "Only SELECT statements are allowed."
-        )
+        assert error.value.message == ("Only SELECT statements are allowed.")
 
         self.query_adapter.execute.assert_not_called()
 
@@ -261,9 +254,7 @@ class TestAnalysisQueryWorkflow:
 
         result = await self.workflow.execute(request)
 
-        assert result.executed_sql == (
-            "SELECT COUNT(*) AS total FROM dataset"
-        )
+        assert result.executed_sql == ("SELECT COUNT(*) AS total FROM dataset")
 
         self.query_adapter.execute.assert_called_once_with(
             parquet_content=b"parquet-content",

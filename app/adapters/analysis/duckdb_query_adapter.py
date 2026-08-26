@@ -153,17 +153,11 @@ class DuckDBQueryAdapter:
                 sql=sql,
             )
 
-            limited_sql = (
-                f"SELECT * FROM ({sql}) AS analysis_result "
-                f"LIMIT {limit}"
-            )
+            limited_sql = f"SELECT * FROM ({sql}) AS analysis_result " f"LIMIT {limit}"
 
             cursor = connection.execute(limited_sql)
 
-            columns = [
-                description[0]
-                for description in cursor.description
-            ]
+            columns = [description[0] for description in cursor.description]
 
             raw_rows = cursor.fetchall()
 
@@ -183,9 +177,7 @@ class DuckDBQueryAdapter:
             )
 
         except duckdb.Error as error:
-            raise RuntimeError(
-                "Unable to execute the analytical query."
-            ) from error
+            raise RuntimeError("Unable to execute the analytical query.") from error
 
         finally:
             connection.close()
@@ -212,9 +204,7 @@ class DuckDBQueryAdapter:
             int:
                 Total number of rows produced by the query.
         """
-        count_sql = (
-            f"SELECT COUNT(*) FROM ({sql}) AS analysis_count"
-        )
+        count_sql = f"SELECT COUNT(*) FROM ({sql}) AS analysis_count"
 
         result = connection.execute(count_sql).fetchone()
 
@@ -274,19 +264,13 @@ class DuckDBQueryAdapter:
                 If any required execution input is invalid.
         """
         if not parquet_content:
-            raise ValueError(
-                "Parquet content must not be empty."
-            )
+            raise ValueError("Parquet content must not be empty.")
 
         if not sql.strip():
-            raise ValueError(
-                "SQL query must not be empty."
-            )
+            raise ValueError("SQL query must not be empty.")
 
         if limit <= 0:
-            raise ValueError(
-                "Query limit must be greater than zero."
-            )
+            raise ValueError("Query limit must be greater than zero.")
 
     def _to_json_safe(
         self,
@@ -325,21 +309,12 @@ class DuckDBQueryAdapter:
             return value
 
         if isinstance(value, list):
-            return [
-                self._to_json_safe(item)
-                for item in value
-            ]
+            return [self._to_json_safe(item) for item in value]
 
         if isinstance(value, tuple):
-            return [
-                self._to_json_safe(item)
-                for item in value
-            ]
+            return [self._to_json_safe(item) for item in value]
 
         if isinstance(value, dict):
-            return {
-                str(key): self._to_json_safe(item)
-                for key, item in value.items()
-            }
+            return {str(key): self._to_json_safe(item) for key, item in value.items()}
 
         return value

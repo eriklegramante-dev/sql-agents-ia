@@ -84,7 +84,8 @@ class ChatMessageWorkflowTest(unittest.IsolatedAsyncioTestCase):
     ):
         return ChatMessageWorkflow(
             preferences_workflow=preferences_workflow or FakePreferencesWorkflow(),
-            intent_detector=intent_detector or FakeIntentDetector(
+            intent_detector=intent_detector
+            or FakeIntentDetector(
                 ChatIntent.GENERAL_CHAT,
             ),
             assistant=assistant or FakeAssistant(),

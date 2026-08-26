@@ -14,9 +14,7 @@ class FakeInitWorkflow:
     ) -> dict:
         self.received_request = request
 
-        return {
-            "status": "UPLOADING"
-        }
+        return {"status": "UPLOADING"}
 
 
 class FakeCompleteWorkflow:
@@ -107,9 +105,7 @@ async def test_initialize_upload_delegates_to_workflow() -> None:
 
     result = await service.initialize_upload(request)
 
-    assert result == {
-        "status": "UPLOADING"
-    }
+    assert result == {"status": "UPLOADING"}
 
     assert init_workflow.received_request == request
 
@@ -134,15 +130,9 @@ async def test_complete_upload_delegates_to_workflow() -> None:
 
     assert result["status"] == "COMPLETED"
 
-    assert (
-        complete_workflow.received_dataset_id
-        == "dataset-1"
-    )
+    assert complete_workflow.received_dataset_id == "dataset-1"
 
-    assert (
-        complete_workflow.received_upload_id
-        == "upload-1"
-    )
+    assert complete_workflow.received_upload_id == "upload-1"
 
     assert complete_workflow.received_parts == parts
 
@@ -159,12 +149,6 @@ async def test_abort_upload_delegates_to_workflow() -> None:
 
     assert result["upload_status"] == "ABORTED"
 
-    assert (
-        abort_workflow.received_dataset_id
-        == "dataset-1"
-    )
+    assert abort_workflow.received_dataset_id == "dataset-1"
 
-    assert (
-        abort_workflow.received_upload_id
-        == "upload-1"
-    )
+    assert abort_workflow.received_upload_id == "upload-1"

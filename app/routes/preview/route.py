@@ -23,16 +23,12 @@ router = APIRouter(
 async def get_dataset_preview(
     dataset_id: UUID,
     limit: int | None = Query(
-    default=None,
-    ge=1,
-    le=100,
-    description="Maximum number of rows returned in the preview.",
-
+        default=None,
+        ge=1,
+        le=100,
+        description="Maximum number of rows returned in the preview.",
     ),
-    controller: DatasetPreviewController = Depends(
-        get_dataset_preview_controller
-    ),
-
+    controller: DatasetPreviewController = Depends(get_dataset_preview_controller),
 ) -> DatasetPreviewResponseDTO:
     request = DatasetPreviewRequestDTO(
         dataset_id=dataset_id,

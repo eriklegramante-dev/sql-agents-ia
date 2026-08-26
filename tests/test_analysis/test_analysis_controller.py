@@ -111,9 +111,7 @@ class AnalysisQueryControllerTest(unittest.IsolatedAsyncioTestCase):
             context.exception.detail,
             {
                 "success": False,
-                "message": (
-                    "Internal server error during analysis query execution."
-                ),
+                "message": ("Internal server error during analysis query execution."),
                 "data": None,
                 "errors": ["An unexpected internal error occurred."],
             },

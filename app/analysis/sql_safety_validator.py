@@ -112,9 +112,7 @@ class SQLSafetyValidator:
                 statements.
         """
         if ";" in sql:
-            raise ValueError(
-                "Multiple SQL statements are not allowed."
-            )
+            raise ValueError("Multiple SQL statements are not allowed.")
 
     def _validate_select_statement(
         self,
@@ -132,9 +130,7 @@ class SQLSafetyValidator:
                 If the query does not begin with SELECT.
         """
         if re.match(r"^SELECT\b", sql, flags=re.IGNORECASE) is None:
-            raise ValueError(
-                "Only SELECT statements are allowed."
-            )
+            raise ValueError("Only SELECT statements are allowed.")
 
     def _validate_forbidden_keywords(
         self,
@@ -155,6 +151,4 @@ class SQLSafetyValidator:
             pattern = rf"\b{re.escape(keyword)}\b"
 
             if re.search(pattern, sql, flags=re.IGNORECASE):
-                raise ValueError(
-                    f"SQL operation '{keyword}' is not allowed."
-                )
+                raise ValueError(f"SQL operation '{keyword}' is not allowed.")

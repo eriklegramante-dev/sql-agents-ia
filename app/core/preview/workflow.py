@@ -57,8 +57,7 @@ class DatasetPreviewWorkflow:
         normalized_limit = self._normalize_limit(request.limit)
 
         self.logger.log_info(
-            f"Starting dataset preview retrieval for dataset "
-            f"{request.dataset_id}."
+            f"Starting dataset preview retrieval for dataset " f"{request.dataset_id}."
         )
 
         dataset = await self.dataset_repository.get_by_id(
@@ -108,14 +107,10 @@ class DatasetPreviewWorkflow:
 
     def _validate_dependencies(self) -> None:
         if self.dataset_repository is None:
-            raise RuntimeError(
-                "Dataset repository dependency was not configured."
-            )
+            raise RuntimeError("Dataset repository dependency was not configured.")
 
         if self.storage_adapter is None:
-            raise RuntimeError(
-                "Storage adapter dependency was not configured."
-            )
+            raise RuntimeError("Storage adapter dependency was not configured.")
 
     def _normalize_limit(
         self,
@@ -159,8 +154,7 @@ class DatasetPreviewWorkflow:
         if normalized_status not in allowed_statuses:
             raise AppException(
                 message=(
-                    "Dataset must be prepared or profiled before preview "
-                    "retrieval."
+                    "Dataset must be prepared or profiled before preview " "retrieval."
                 ),
                 status_code=409,
             )
@@ -171,9 +165,7 @@ class DatasetPreviewWorkflow:
     ) -> None:
         if not prepared_object_key:
             raise AppException(
-                message=(
-                    "Dataset does not have a prepared object available."
-                ),
+                message=("Dataset does not have a prepared object available."),
                 status_code=409,
             )
 

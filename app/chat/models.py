@@ -3,7 +3,6 @@ from enum import Enum
 from typing import TypedDict
 from uuid import UUID
 
-
 ScalarValue = str | int | float | bool | None
 MetadataValue = str | int | float | bool | None
 
@@ -19,8 +18,10 @@ class QueryResult(TypedDict):
         rows:
             Query result rows mapped by column name.
     """
+
     columns: list[str]
     rows: list[dict[str, ScalarValue]]
+
 
 class ChartSeries(TypedDict):
     """
@@ -36,6 +37,7 @@ class ChartSeries(TypedDict):
 
     name: str
     values: list[int | float]
+
 
 class ChartResult(TypedDict):
     """
@@ -62,6 +64,7 @@ class ChartResult(TypedDict):
 
 
 ArtifactContent = QueryResult | ChartResult
+
 
 class ChatIntent(str, Enum):
     """
@@ -204,4 +207,3 @@ class ChatMessageResult:
     tool_used: str | None
     dataset_id: UUID | None
     artifact: ChatArtifact | None
-

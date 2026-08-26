@@ -1,3 +1,13 @@
+"""
+Analysis HTTP route controllers.
+
+Handles incoming API requests, coordinates execution with the analysis services,
+and standardizes controlled responses for business and runtime exceptions.
+Contains both the query execution workflow (AnalysisQueryController) and
+the chart generation workflow (AnalysisController).
+"""
+
+import logging
 from fastapi import HTTPException
 
 from app.logs.setup_logger import LOGGER, LoggerManager
@@ -8,6 +18,14 @@ from app.routes.analysis.dtos.dto import (
 )
 from app.routes.analysis.services.service import AnalysisQueryService
 
+from app.routes.analysis.dtos.dto import (
+    AnalysisChartRequestDTO,
+    AnalysisChartResponseDTO,
+)
+from app.routes.analysis.services.service import AnalysisService
+
+logger = logging.getLogger(__name__)
+
 
 class AnalysisQueryController:
     """
@@ -17,33 +35,6 @@ class AnalysisQueryController:
     analysis application service. It delegates validated requests to the
     service, wraps successful results in the standard response structure, and
     converts predictable application exceptions into HTTP responses.
-
-    Unexpected failures are translated into a generic internal server error
-    response without exposing infrastructure or implementation details to the
-    API client.
-
-    The controller contains no dataset lookup, SQL validation, storage access,
-    query execution, or analytical business rules.
-
-    Dependencies are received through constructor injection, preventing the
-    controller from instantiating its own service or logging implementation.
-
-    Args:
-        service:
-            Application service responsible for coordinating the dataset
-            analysis query execution flow.
-
-        logger:
-            Logger manager used to record controller execution events and
-            unexpected failures.
-
-    Attributes:
-        service:
-            Application service responsible for coordinating analysis query
-            execution.
-
-        logger:
-            Logger manager used during controller execution.
     """
 
     def __init__(
@@ -60,20 +51,6 @@ class AnalysisQueryController:
     ) -> AnalysisQueryResponseDTO:
         """
         Execute HTTP-level dataset analysis query processing.
-
-        Args:
-            request:
-                Validated analysis query request received from the route.
-
-        Returns:
-            AnalysisQueryResponseDTO:
-                Standardized response envelope containing the analytical
-                query result.
-
-        Raises:
-            HTTPException:
-                If a predictable application error occurs or an unexpected
-                internal failure prevents query execution.
         """
         try:
             self.logger.log_info(
@@ -96,9 +73,7 @@ class AnalysisQueryController:
             )
 
         except AppException as error:
-            self.logger.log_warning(
-                f"Analysis query execution failed: {error.message}"
-            )
+            self.logger.log_warning(f"Analysis query execution failed: {error.message}")
 
             raise HTTPException(
                 status_code=error.status_code,
@@ -120,12 +95,55 @@ class AnalysisQueryController:
                 detail={
                     "success": False,
                     "message": (
-                        "Internal server error during analysis query "
-                        "execution."
+                        "Internal server error during analysis query " "execution."
                     ),
                     "data": None,
-                    "errors": [
-                        "An unexpected internal error occurred."
-                    ],
+                    "errors": ["An unexpected internal error occurred."],
                 },
             ) from error
+
+
+class AnalysisController:
+    """
+    Controller handling HTTP operations for the dataset analysis module.
+
+    Encapsulates service invocation and shields public API clients from
+    internal implementation details during unexpected failures.
+    """
+
+    def __init__(self, service: AnalysisService) -> None:
+        """
+        Initializes the analysis controller.
+
+        Args:
+            service (AnalysisService):
+                Wired analysis service instance for business execution.
+        """
+        self._service = service
+
+    async def generate_chart(
+        self,
+        payload: AnalysisChartRequestDTO,
+    ) -> AnalysisChartResponseDTO:
+        """
+        Handles chart generation requests with controlled error handling.
+
+        Processes incoming requests, sanitizes validation errors, logs unexpected
+        exceptions internally, and returns formatted response DTOs.
+        """
+        try:
+            return await self._service.generate_chart(payload)
+        except ValueError as err:
+            logger.warning("Validation error while generating chart: %s", err)
+            return AnalysisChartResponseDTO(
+                success=False,
+                message=str(err),
+                data=None,
+            )
+        except Exception:
+            logger.exception("Unexpected error occurred while generating chart.")
+            return AnalysisChartResponseDTO(
+                success=False,
+                message="An internal server error occurred while processing the chart.",
+                data=None,
+            )

@@ -8,6 +8,7 @@ from app.routes.uploads.dtos.dto import UploadInitRequestDTO
 
 from uuid import UUID
 
+
 class UploadService:
     """Service layer responsible for orchestrating upload workflows.
 
@@ -51,15 +52,11 @@ class UploadService:
         Returns:
             Dictionary containing the initialized upload metadata.
         """
-        self.logger.log_info(
-            "[upload:init:service] Starting upload initialization"
-        )
+        self.logger.log_info("[upload:init:service] Starting upload initialization")
 
         result = await self.init_workflow.run(request)
 
-        self.logger.log_info(
-            "[upload:init:service] Upload initialization finished"
-        )
+        self.logger.log_info("[upload:init:service] Upload initialization finished")
 
         return result
 
@@ -82,9 +79,7 @@ class UploadService:
         Returns:
             Dictionary containing the completed upload metadata.
         """
-        self.logger.log_info(
-            "[upload:complete:service] Starting upload completion"
-        )
+        self.logger.log_info("[upload:complete:service] Starting upload completion")
 
         result = await self.complete_workflow.run(
             dataset_id=dataset_id,
@@ -92,9 +87,7 @@ class UploadService:
             parts=parts,
         )
 
-        self.logger.log_info(
-            "[upload:complete:service] Upload completion finished"
-        )
+        self.logger.log_info("[upload:complete:service] Upload completion finished")
 
         return result
 
@@ -114,17 +107,13 @@ class UploadService:
         Returns:
             Dictionary containing the final upload status.
         """
-        self.logger.log_info(
-            "[upload:abort:service] Starting upload abort"
-        )
+        self.logger.log_info("[upload:abort:service] Starting upload abort")
 
         result = await self.abort_workflow.run(
             dataset_id=dataset_id,
             upload_id=upload_id,
         )
 
-        self.logger.log_info(
-            "[upload:abort:service] Upload abort finished"
-        )
+        self.logger.log_info("[upload:abort:service] Upload abort finished")
 
         return result
