@@ -18,6 +18,7 @@ from app.routes.prepare.controllers.controller import (
 from app.routes.prepare.services.service import DatasetPreparationService
 from app.settings.setting import get_settings
 
+_db_pool = None
 
 async def get_db_pool() -> asyncpg.Pool:
     """
