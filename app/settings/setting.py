@@ -103,6 +103,15 @@ class SecuritySettings(BaseSettings):
     }
 
 
+class CorsSettings(BaseSettings):
+    origins: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
+
+    model_config = {
+        "env_prefix": "CORS_",
+        "extra": "ignore",
+    }
+
+
 class Settings(BaseSettings):
     env: AppEnvironmentSettings = AppEnvironmentSettings()
     sentry: SentrySettings = SentrySettings()
@@ -112,6 +121,7 @@ class Settings(BaseSettings):
     database: DatabaseSettings = DatabaseSettings()
     storage: StorageSettings = StorageSettings()
     security: SecuritySettings = SecuritySettings()
+    cors: CorsSettings = CorsSettings()
 
     model_config = {
         "env_file": ".env",

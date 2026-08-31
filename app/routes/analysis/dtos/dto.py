@@ -118,6 +118,7 @@ class AnalysisChartRequestDTO(BaseModel):
     type, and axis field mappings) or a natural-language question that will be
     interpreted and converted into a chart execution plan.
     """
+
     dataset_id: UUID
     question: str | None = None
     sql: str | None = None
@@ -139,6 +140,7 @@ class AnalysisChartRequestDTO(BaseModel):
                 "('sql', 'chart_type', 'x_field', 'y_field')."
             )
         return self
+
 
 class ChartSpec(BaseModel):
     """
