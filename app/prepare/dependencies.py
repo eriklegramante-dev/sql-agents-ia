@@ -1,5 +1,6 @@
 import asyncpg
 
+import asyncpg
 from app.adapters.storage.base import StorageAdapter
 from app.adapters.storage.blob_storage_adapter import BlobStorageAdapter
 from app.adapters.storage.local_storage_adapter import LocalStorageAdapter
@@ -17,6 +18,8 @@ from app.routes.prepare.controllers.controller import (
 )
 from app.routes.prepare.services.service import DatasetPreparationService
 from app.settings.setting import get_settings
+
+_db_pool: asyncpg.Pool | None = None
 
 
 async def get_db_pool() -> asyncpg.Pool:
