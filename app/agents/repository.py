@@ -41,35 +41,59 @@ class AgentPreferencesRepository:
 
     async def update_ai_settings(self, user_id: int, payload: UpdateAISettingsDTO) -> Dict[str, Any]:
         """
-        Persists the AI settings updates to the database using an UPSERT strategy.
+        Updates the user's AI settings and formats the updated record for the frontend.
 
-        Applies security constraints to ensure API keys are not overwritten by 
-        masked values originating from the frontend interface.
+        This method validates the incoming user identifier, delegates the persistence 
+        of the new AI settings to the repository layer, and standardizes the output. 
+        It explicitly handles the deserialization of PostgreSQL JSONB strings into 
+        Python dictionaries to ensure strict compatibility with the response model.
 
         Args:
-            user_id (int): The validated unique integer identifier of the user.
-            payload (UpdateAISettingsDTO): The data transfer object containing the settings to update.
+            user_id_raw (Any): The raw user identifier to be validated and converted to an integer.
+            payload (UpdateAISettingsDTO): The data transfer object containing the 
+                new settings (persona, model, temperature, response styles, etc.) to apply.
 
         Returns:
-            Dict[str, Any]: A dictionary representing the updated database record.
-        """
-        current = await self.find_by_user_id(user_id)
-        
-        api_key = current.get("api_key") if current else None
-        if payload.apiKey and payload.apiKey != "••••••••":
-            api_key = payload.apiKey
+            AISettingsResponse: A validated Pydantic model representing the updated 
+                AI settings state, ready to be serialized and consumed by the frontend.
 
-        persona = payload.persona if payload.persona is not None else (current.get("persona") if current else "executive")
-        model = payload.model if payload.model is not None else (current.get("model") if current else "gpt-5")
-        temperature = payload.temperature if payload.temperature is not None else (current.get("temperature") if current else 0.5)
+        Raises:
+            ValueError: If the provided `user_id_raw` fails validation (e.g., non-integer or <= 0).
+        """
+        print(f"\n🚨 [RAIO-X 1] INICIANDO SALVAMENTO PARA USER_ID: {user_id}")
+        print(f"🚨 [RAIO-X 2] DADOS RECEBIDOS (PAYLOAD): {payload.dict(exclude_unset=True)}")
+
+        current = await self.find_by_user_id(user_id)
+        print(f"🚨 [RAIO-X 3] DADOS ATUAIS NO BANCO ANTES DO UPDATE: {current}")
         
-        response_styles = payload.responseStyles if payload.responseStyles is not None else (
-            json.loads(current.get("response_styles", "{}")) if current and current.get("response_styles") else {}
-        )
+        p_api_key = getattr(payload, 'api_key', getattr(payload, 'apiKey', None))
+        p_persona = getattr(payload, 'persona', None)
+        p_model = getattr(payload, 'model', None)
+        p_temperature = getattr(payload, 'temperature', None)
+        p_response_styles = getattr(payload, 'response_styles', getattr(payload, 'responseStyles', None))
+
+        api_key = current.get("api_key") if current else None
+        if p_api_key and p_api_key != "••••••••":
+            api_key = p_api_key
+
+        persona = p_persona if p_persona is not None else (current.get("persona") if current else "executive")
+        model = p_model if p_model is not None else (current.get("model") if current else "gpt-5")
+        temperature = p_temperature if p_temperature is not None else (current.get("temperature") if current else 0.5)
+        
+        current_styles = current.get("response_styles") if current else {}
+        if isinstance(current_styles, str):
+            try:
+                current_styles = json.loads(current_styles)
+            except Exception:
+                current_styles = {}
+                
+        response_styles = p_response_styles if p_response_styles is not None else current_styles
+
+        print(f"🚨 [RAIO-X 4] VARIÁVEIS PRONTAS PARA O SQL -> Model: {model}, Persona: {persona}")
 
         query = """
             INSERT INTO agent_preferences (user_id, api_key, persona, model, temperature, response_styles)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            VALUES ($1, $2, $3, $4, $5, CAST($6 AS jsonb))
             ON CONFLICT (user_id) DO UPDATE SET
                 api_key = EXCLUDED.api_key,
                 persona = EXCLUDED.persona,
@@ -80,14 +104,19 @@ class AgentPreferencesRepository:
             RETURNING *;
         """
 
-        async with self.pool.acquire() as conn:
-            record = await conn.fetchrow(
-                query, 
-                user_id, 
-                api_key, 
-                persona, 
-                model, 
-                temperature, 
-                json.dumps(response_styles)
-            )
-            return dict(record)
+        try:
+            async with self.pool.acquire() as conn:
+                record = await conn.fetchrow(
+                    query, 
+                    user_id, 
+                    api_key, 
+                    persona, 
+                    model, 
+                    temperature, 
+                    json.dumps(response_styles)
+                )
+                print(f"🚨 [RAIO-X 5] SUCESSO! GRAVOU NO BANCO: {dict(record) if record else 'FALHOU/VAZIO'}")
+                return dict(record) if record else {}
+        except Exception as e:
+            print(f"🚨 [RAIO-X 6] ERRO FATAL AO GRAVAR NO BANCO: {str(e)}")
+            raise e

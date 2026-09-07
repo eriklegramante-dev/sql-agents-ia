@@ -29,7 +29,8 @@ class UpdateAISettingsDTO(BaseModel):
     """
     apiKey: Optional[str] = Field(
         default=None, 
-        description="The raw API key provided by the user. Masked values (e.g., '••••••••') are ignored."
+        description="The raw API key provided by the user. Masked values (e.g., '••••••••') are ignored.",
+        alias="apikey"
     )
     persona: Optional[str] = Field(
         default=None, 
@@ -47,8 +48,12 @@ class UpdateAISettingsDTO(BaseModel):
     )
     responseStyles: Optional[Dict[str, Any]] = Field(
         default=None, 
-        description="A dynamic dictionary of specific stylistic toggles for the AI output."
+        description="A dynamic dictionary of specific stylistic toggles for the AI output.",
+        alias="responseStyles"
     )
+
+    class Config:
+        populate_by_name = True
 
 class AISettingsResponse(BaseModel):
     """

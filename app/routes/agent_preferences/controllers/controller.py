@@ -112,8 +112,10 @@ class AgentPreferencesController:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail=str(err)
             )
-        except Exception:
+        except Exception as e:
+            print(f"🚨 ERRO FATAL NO SALVAMENTO: {repr(e)}") 
+            
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="An internal server error occurred while updating AI settings.",
+                detail=f"Erro interno no banco: {str(e)}",
             )

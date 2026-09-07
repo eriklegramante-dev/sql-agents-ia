@@ -76,6 +76,7 @@ async def update_ai_settings(
     payload: UpdateAISettingsDTO = Body(...),
     controller: AgentPreferencesController = Depends(get_controller)
 ):
+    print("🚨 PAYLOAD RECEBIDO DO FRONTEND:", payload.dict(exclude_unset=True))
     """
     Updates specific AI settings. Includes security constraints to prevent 
     overwriting valid API keys with visual frontend mask strings.
