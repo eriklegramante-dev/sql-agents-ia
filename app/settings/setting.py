@@ -1,5 +1,6 @@
 from enum import Enum
 from functools import lru_cache
+from pydantic import Field, field_validator
 
 from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
@@ -104,13 +105,17 @@ class SecuritySettings(BaseSettings):
 
 
 class CorsSettings(BaseSettings):
-    origins: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
+    origins: str = "http://localhost:3000,http://127.0.0.1:3000"
+
+    @property
+    def origins_list(self) -> list[str]:
+        """Converte a string separada por vírgulas em uma lista real sob demanda."""
+        return [i.strip() for i in self.origins.split(",") if i.strip()]
 
     model_config = {
         "env_prefix": "CORS_",
         "extra": "ignore",
     }
-
 
 class Settings(BaseSettings):
     env: AppEnvironmentSettings = AppEnvironmentSettings()

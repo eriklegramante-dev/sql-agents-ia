@@ -1,112 +1,79 @@
-from pydantic import BaseModel, Field, ConfigDict, field_validator
-from datetime import datetime, timezone
-from typing import List, Optional
-
+from pydantic import BaseModel, Field
+from typing import Optional, Dict, Any
 
 class AgentPreferencesRequest(BaseModel):
-    """
-    DTO handling robust validation and sanitization for agent preference read requests.
-    """
-
-    user_id: int = Field(
-        ...,
-        gt=0,
-        description="The unique integer identifier of the user to look up preferences.",
-    )
-
-    language_filter: Optional[str] = Field(
-        None,
-        min_length=2,
-        max_length=10,
-        description="Optional filter to search preferences by language code (e.g., pt-BR).",
-    )
-
-    @field_validator("language_filter")
-    @classmethod
-    def sanitize_language_filter(cls, value: Optional[str]) -> Optional[str]:
-        """
-        Sanitizes the language filter input by stripping spaces and normalizing cases.
-        """
-        if value is None:
-            return value
-
-        cleaned_value = value.strip()
-        if not cleaned_value:
-            return None
-
-        return cleaned_value
-
-    model_config = ConfigDict(extra="forbid")
-
+    user_id: int
 
 class AgentPreferencesData(BaseModel):
-    """
-    Represents the internal schema validation for the agent preference core data.
-    """
-
-    user_id: int = Field(
-        ..., gt=0, description="The unique integer identifier of the user."
-    )
-
-    persona_name: str = Field(
-        ...,
-        min_length=1,
-        description="The name of the persona adopted by the AI agent.",
-    )
-    persona_description: str = Field(
-        ...,
-        min_length=1,
-        description="Detailed profile role and behavioral description of the persona.",
-    )
-    response_style: str = Field(
-        ...,
-        min_length=1,
-        description="The communication tone and writing style (e.g., technical, direct).",
-    )
-
-    language: str = Field(
-        default="pt-BR", min_length=2, description="The default response language code."
-    )
-    default_dataset_scope: Optional[str] = Field(
-        None, description="The default secure database scope boundaries for queries."
-    )
-
-    tool_preferences: List[str] = Field(
-        default_factory=list,
-        description="List of functional tools and capabilities permitted for execution.",
-    )
-    guardrails: List[str] = Field(
-        default_factory=list,
-        description="Security constraint guidelines and compliance filters applied to the model context.",
-    )
-
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
-        description="Timestamp indicating when the preference record was initially persisted.",
-    )
-    updated_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
-        description="Timestamp tracking the most recent modification of the preference record.",
-    )
-
-    model_config = ConfigDict(from_attributes=True, extra="forbid")
-
-
+    user_id: int
+    persona_name: Optional[str] = None
+    persona_description: Optional[str] = None
+    response_style: Optional[str] = None
+    language: Optional[str] = None
+    default_dataset_scope: Optional[str] = None
+    tool_preferences: Optional[list] = []
+    guardrails: Optional[list] = []
+    
 class AgentPreferencesResponse(BaseModel):
-    """
-    Standard enveloped response DTO ensuring API contract uniformity across the project.
-    """
+    success: bool
+    message: str
+    data: AgentPreferencesData
 
-    success: bool = Field(
-        ...,
-        description="Indicates whether the inbound operation was processed successfully.",
+
+class UpdateAISettingsDTO(BaseModel):
+    """
+    Data Transfer Object for updating user AI settings.
+    
+    Captures partial updates from the frontend interface. All fields are optional 
+    to support PATCH-like update behavior.
+    """
+    apiKey: Optional[str] = Field(
+        default=None, 
+        description="The raw API key provided by the user. Masked values (e.g., '••••••••') are ignored.",
+        alias="apikey"
     )
-    message: str = Field(
-        ...,
-        description="Structural context feedback message explaining the operation outcome.",
+    persona: Optional[str] = Field(
+        default=None, 
+        description="The selected conversational persona (e.g., 'executive', 'friendly')."
     )
-    data: Optional[AgentPreferencesData] = Field(
-        None, description="The validated payload containing agent preference records."
+    model: Optional[str] = Field(
+        default=None, 
+        description="The underlying LLM model identifier (e.g., 'gpt-5')."
+    )
+    temperature: Optional[float] = Field(
+        default=None, 
+        ge=0.0, 
+        le=1.0, 
+        description="The creativity/randomness threshold for the AI responses, between 0.0 and 1.0."
+    )
+    responseStyles: Optional[Dict[str, Any]] = Field(
+        default=None, 
+        description="A dynamic dictionary of specific stylistic toggles for the AI output.",
+        alias="responseStyles"
     )
 
-    model_config = ConfigDict(extra="forbid")
+    class Config:
+        populate_by_name = True
+
+class AISettingsResponse(BaseModel):
+    """
+    Data Transfer Object for delivering AI settings to the frontend UI.
+    
+    Ensures secure data transmission by providing a boolean flag for the API key's 
+    existence rather than exposing the actual sensitive key value.
+    """
+    hasApiKey: bool = Field(
+        description="Flag indicating if a valid API key is currently stored for the user."
+    )
+    persona: str = Field(
+        description="The active conversational persona."
+    )
+    model: str = Field(
+        description="The active LLM model identifier."
+    )
+    temperature: float = Field(
+        description="The active temperature setting governing response creativity."
+    )
+    responseStyles: Dict[str, Any] = Field(
+        description="The active stylistic toggles applied to AI responses."
+    )
