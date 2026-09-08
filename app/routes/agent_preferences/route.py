@@ -51,7 +51,7 @@ async def get_agent_preferences(
     response_model=AISettingsResponse,
     status_code=status.HTTP_200_OK,
     summary="Retrieves the AI settings configured for the frontend UI.",
-    #dependencies=[Depends(verify_signature)],
+    dependencies=[Depends(verify_signature)],
 )
 async def get_ai_settings(
     user_id: int,
@@ -69,7 +69,7 @@ async def get_ai_settings(
     response_model=AISettingsResponse,
     status_code=status.HTTP_200_OK,
     summary="Updates the user's AI settings from the frontend UI.",
-    #dependencies=[Depends(verify_signature)],
+    dependencies=[Depends(verify_signature)],
 )
 async def update_ai_settings(
     user_id: int,
