@@ -120,7 +120,7 @@ class AgentPreferencesWorkflow:
         if isinstance(raw_styles, str):
             try:
                 raw_styles = json.loads(raw_styles)
-            except Exception:
+            except json.JSONDecodeError:
                 raw_styles = {}
 
         return AISettingsResponse(

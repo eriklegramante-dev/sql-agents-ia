@@ -1,3 +1,5 @@
+import logging
+
 from typing import Any, Optional
 from fastapi import HTTPException, status
 from app.routes.agent_preferences.services.service import AgentPreferencesService
@@ -8,6 +10,7 @@ from app.routes.agent_preferences.dtos.dto import (
     UpdateAISettingsDTO,    
 )
 
+logger = logging.getLogger(__name__)
 
 class AgentPreferencesController:
     """
@@ -113,9 +116,8 @@ class AgentPreferencesController:
                 status_code=status.HTTP_400_BAD_REQUEST, detail=str(err)
             )
         except Exception as e:
-            print(f"🚨 ERRO FATAL NO SALVAMENTO: {repr(e)}") 
-            
+            logger.error(f"Failed to update AI settings for user {user_id_raw}: {repr(e)}", exc_info=True)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Erro interno no banco: {str(e)}",
+                detail="An internal server error occurred while updating AI settings."
             )
