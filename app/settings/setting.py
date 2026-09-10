@@ -117,6 +117,15 @@ class CorsSettings(BaseSettings):
         "extra": "ignore",
     }
 
+class OpenAISettings(BaseSettings):
+    api_key: str = ""
+    model: str = "gpt-5.6-luna"
+
+    model_config = {
+        "env_prefix": "OPENAI_",
+        "extra": "ignore",
+    }
+
 class Settings(BaseSettings):
     env: AppEnvironmentSettings = AppEnvironmentSettings()
     sentry: SentrySettings = SentrySettings()
@@ -127,6 +136,7 @@ class Settings(BaseSettings):
     storage: StorageSettings = StorageSettings()
     security: SecuritySettings = SecuritySettings()
     cors: CorsSettings = CorsSettings()
+    openai: OpenAISettings = OpenAISettings()
 
     model_config = {
         "env_file": ".env",

@@ -129,7 +129,7 @@ class ChatMessageWorkflow:
             ChartGenerationException:
                 If the chart executor cannot produce a valid chart result.
         """
-        raw_preferences = self._preferences_workflow.execute(
+        raw_preferences = await self._preferences_workflow.execute(
             request.user_id,
         )
 

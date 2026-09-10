@@ -1,3 +1,7 @@
+from unittest.mock import MagicMock
+
+import asyncpg
+
 from app.adapters.chat.assistant_adapter import AssistantAdapter
 from app.adapters.chat.chart_tool_adapter import ChartToolAdapter
 from app.adapters.chat.query_tool_adapter import QueryToolAdapter
@@ -13,8 +17,14 @@ from app.routes.chat.controllers.controller import ChatMessageController
 from app.routes.chat.services.service import ChatMessageService
 
 
+def create_fake_pool() -> asyncpg.Pool:
+    return MagicMock(spec=asyncpg.Pool)
+
+
 def test_get_chat_message_workflow_returns_chat_message_workflow():
-    workflow = get_chat_message_workflow()
+    pool = create_fake_pool()
+
+    workflow = get_chat_message_workflow(pool)
 
     assert isinstance(workflow, ChatMessageWorkflow)
     assert isinstance(workflow._preferences_workflow, AgentPreferencesWorkflow)
@@ -22,17 +32,22 @@ def test_get_chat_message_workflow_returns_chat_message_workflow():
     assert isinstance(workflow._assistant, AssistantAdapter)
     assert isinstance(workflow._query_tool, QueryToolAdapter)
     assert isinstance(workflow._chart_tool, ChartToolAdapter)
+    assert workflow._preferences_workflow.repository.pool is pool
 
 
 def test_get_chat_message_service_returns_chat_message_service():
-    service = get_chat_message_service()
+    pool = create_fake_pool()
+
+    service = get_chat_message_service(pool)
 
     assert isinstance(service, ChatMessageService)
     assert isinstance(service._workflow, ChatMessageWorkflow)
 
 
 def test_get_chat_message_controller_returns_chat_message_controller():
-    controller = get_chat_message_controller()
+    pool = create_fake_pool()
+
+    controller = get_chat_message_controller(pool)
 
     assert isinstance(controller, ChatMessageController)
     assert isinstance(controller._service, ChatMessageService)
