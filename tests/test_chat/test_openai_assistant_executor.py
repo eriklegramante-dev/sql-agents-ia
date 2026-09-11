@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import openai
 
 from app.adapters.chat.openai_assistant_executor import (
-    execute_openai_assistant,
+    create_openai_assistant_executor,
 )
 from app.chat.exceptions import (
     AssistantExecutionException,
@@ -26,41 +26,28 @@ class OpenAIAssistantExecutorTest(unittest.IsolatedAsyncioTestCase):
             guardrails=(),
         )
 
-    def build_settings(
-        self,
-        api_key="test-key",
-        model="gpt-5.6-luna",
-    ):
-        return SimpleNamespace(
-            openai=SimpleNamespace(
-                api_key=api_key,
-                model=model,
-            )
-        )
-
     def build_client(self):
         client = MagicMock()
         client.responses.create = AsyncMock()
         return client
 
     async def test_returns_generated_answer(self):
-        settings = self.build_settings()
         client = self.build_client()
+
         client.responses.create.return_value = SimpleNamespace(
             output_text="  resposta gerada  "
         )
 
-        with (
-            patch(
-                "app.adapters.chat.openai_assistant_executor.get_settings",
-                return_value=settings,
-            ),
-            patch(
-                "app.adapters.chat.openai_assistant_executor.AsyncOpenAI",
-                return_value=client,
-            ) as mocked_openai,
-        ):
-            result = await execute_openai_assistant(
+        executor = create_openai_assistant_executor(
+            api_key="test-key",
+            model="gpt-5.6-luna",
+        )
+
+        with patch(
+            "app.adapters.chat.openai_assistant_executor.AsyncOpenAI",
+            return_value=client,
+        ) as mocked_openai:
+            result = await executor(
                 "Olá",
                 self.preferences,
             )
@@ -84,15 +71,15 @@ class OpenAIAssistantExecutorTest(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_raises_when_api_key_is_missing(self):
-        settings = self.build_settings(api_key="")
+        executor = create_openai_assistant_executor(
+            api_key="",
+            model="gpt-5.6-luna",
+        )
 
-        with patch(
-            "app.adapters.chat.openai_assistant_executor.get_settings",
-            return_value=settings,
-        ), self.assertRaises(
+        with self.assertRaises(
             AssistantExecutionException,
         ) as context:
-            await execute_openai_assistant(
+            await executor(
                 "Olá",
                 self.preferences,
             )
@@ -103,25 +90,27 @@ class OpenAIAssistantExecutorTest(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_raises_when_response_is_empty(self):
-        settings = self.build_settings()
         client = self.build_client()
+
         client.responses.create.return_value = SimpleNamespace(
             output_text="   "
         )
 
+        executor = create_openai_assistant_executor(
+            api_key="test-key",
+            model="gpt-5.6-luna",
+        )
+
         with (
-            patch(
-                "app.adapters.chat.openai_assistant_executor.get_settings",
-                return_value=settings,
-            ),
             patch(
                 "app.adapters.chat.openai_assistant_executor.AsyncOpenAI",
                 return_value=client,
-            ),self.assertRaises(
-            AssistantExecutionException,
-        ) as context
+            ),
+            self.assertRaises(
+                AssistantExecutionException,
+            ) as context,
         ):
-            await execute_openai_assistant(
+            await executor(
                 "Olá",
                 self.preferences,
             )
@@ -132,29 +121,29 @@ class OpenAIAssistantExecutorTest(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_translates_authentication_error(self):
-        settings = self.build_settings()
         client = self.build_client()
-        client.responses.create.side_effect = (
-            openai.AuthenticationError(
-                "invalid api key",
-                response=MagicMock(),
-                body=None,
-            )
+
+        client.responses.create.side_effect = openai.AuthenticationError(
+            "invalid api key",
+            response=MagicMock(),
+            body=None,
+        )
+
+        executor = create_openai_assistant_executor(
+            api_key="test-key",
+            model="gpt-5.6-luna",
         )
 
         with (
             patch(
-                "app.adapters.chat.openai_assistant_executor.get_settings",
-                return_value=settings,
-            ),
-            patch(
                 "app.adapters.chat.openai_assistant_executor.AsyncOpenAI",
                 return_value=client,
-            ),self.assertRaises(
-            AssistantExecutionException,
-        ) as context
+            ),
+            self.assertRaises(
+                AssistantExecutionException,
+            ) as context,
         ):
-            await execute_openai_assistant(
+            await executor(
                 "Olá",
                 self.preferences,
             )
@@ -165,27 +154,29 @@ class OpenAIAssistantExecutorTest(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_translates_rate_limit_error(self):
-        settings = self.build_settings()
         client = self.build_client()
+
         client.responses.create.side_effect = openai.RateLimitError(
             "rate limit",
             response=MagicMock(),
             body=None,
         )
 
+        executor = create_openai_assistant_executor(
+            api_key="test-key",
+            model="gpt-5.6-luna",
+        )
+
         with (
-            patch(
-                "app.adapters.chat.openai_assistant_executor.get_settings",
-                return_value=settings,
-            ),
             patch(
                 "app.adapters.chat.openai_assistant_executor.AsyncOpenAI",
                 return_value=client,
-            ),self.assertRaises(
-            AssistantUnavailableException,
-        ) as context
+            ),
+            self.assertRaises(
+                AssistantUnavailableException,
+            ) as context,
         ):
-            await execute_openai_assistant(
+            await executor(
                 "Olá",
                 self.preferences,
             )
@@ -196,49 +187,53 @@ class OpenAIAssistantExecutorTest(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_translates_timeout_error(self):
-        settings = self.build_settings()
         client = self.build_client()
+
         client.responses.create.side_effect = openai.APITimeoutError(
             request=MagicMock(),
         )
 
+        executor = create_openai_assistant_executor(
+            api_key="test-key",
+            model="gpt-5.6-luna",
+        )
+
         with (
-            patch(
-                "app.adapters.chat.openai_assistant_executor.get_settings",
-                return_value=settings,
-            ),
             patch(
                 "app.adapters.chat.openai_assistant_executor.AsyncOpenAI",
                 return_value=client,
-            ),self.assertRaises(
-            AssistantTimeoutException,
-        )
+            ),
+            self.assertRaises(
+                AssistantTimeoutException,
+            ),
         ):
-            await execute_openai_assistant(
+            await executor(
                 "Olá",
                 self.preferences,
             )
 
     async def test_translates_connection_error(self):
-        settings = self.build_settings()
         client = self.build_client()
+
         client.responses.create.side_effect = openai.APIConnectionError(
             request=MagicMock(),
         )
 
+        executor = create_openai_assistant_executor(
+            api_key="test-key",
+            model="gpt-5.6-luna",
+        )
+
         with (
-            patch(
-                "app.adapters.chat.openai_assistant_executor.get_settings",
-                return_value=settings,
-            ),
             patch(
                 "app.adapters.chat.openai_assistant_executor.AsyncOpenAI",
                 return_value=client,
-            ),self.assertRaises(
-            AssistantUnavailableException,
-        ) as context
+            ),
+            self.assertRaises(
+                AssistantUnavailableException,
+            ) as context,
         ):
-            await execute_openai_assistant(
+            await executor(
                 "Olá",
                 self.preferences,
             )
@@ -249,27 +244,29 @@ class OpenAIAssistantExecutorTest(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_translates_api_status_error(self):
-        settings = self.build_settings()
         client = self.build_client()
+
         client.responses.create.side_effect = openai.APIStatusError(
             "status error",
             response=MagicMock(),
             body=None,
         )
 
+        executor = create_openai_assistant_executor(
+            api_key="test-key",
+            model="gpt-5.6-luna",
+        )
+
         with (
-            patch(
-                "app.adapters.chat.openai_assistant_executor.get_settings",
-                return_value=settings,
-            ),
             patch(
                 "app.adapters.chat.openai_assistant_executor.AsyncOpenAI",
                 return_value=client,
-            ),self.assertRaises(
-            AssistantUnavailableException,
-        ) as context
+            ),
+            self.assertRaises(
+                AssistantUnavailableException,
+            ) as context,
         ):
-            await execute_openai_assistant(
+            await executor(
                 "Olá",
                 self.preferences,
             )
@@ -279,24 +276,56 @@ class OpenAIAssistantExecutorTest(unittest.IsolatedAsyncioTestCase):
             "The assistant service returned an unexpected response.",
         )
 
-    async def test_translates_unexpected_error(self):
-        settings = self.build_settings()
+    async def test_translates_api_error(self):
         client = self.build_client()
-        client.responses.create.side_effect = RuntimeError("boom")
+
+        client.responses.create.side_effect = openai.APIError(
+            "api error",
+            request=MagicMock(),
+            body=None,
+        )
+
+        executor = create_openai_assistant_executor(
+            api_key="test-key",
+            model="gpt-5.6-luna",
+        )
 
         with (
             patch(
-                "app.adapters.chat.openai_assistant_executor.get_settings",
-                return_value=settings,
+                "app.adapters.chat.openai_assistant_executor.AsyncOpenAI",
+                return_value=client,
             ),
+            self.assertRaises(
+                AssistantExecutionException,
+            ),
+        ):
+            await executor(
+                "Olá",
+                self.preferences,
+            )
+
+    async def test_translates_unexpected_error(self):
+        client = self.build_client()
+
+        client.responses.create.side_effect = RuntimeError(
+            "boom"
+        )
+
+        executor = create_openai_assistant_executor(
+            api_key="test-key",
+            model="gpt-5.6-luna",
+        )
+
+        with (
             patch(
                 "app.adapters.chat.openai_assistant_executor.AsyncOpenAI",
                 return_value=client,
-            ),self.assertRaises(
-            AssistantExecutionException,
-        )
+            ),
+            self.assertRaises(
+                AssistantExecutionException,
+            ),
         ):
-            await execute_openai_assistant(
+            await executor(
                 "Olá",
                 self.preferences,
             )

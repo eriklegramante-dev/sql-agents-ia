@@ -6,7 +6,7 @@ from fastapi import Depends
 from app.adapters.chat.assistant_adapter import AssistantAdapter
 from app.adapters.chat.chart_tool_adapter import ChartToolAdapter
 from app.adapters.chat.openai_assistant_executor import (
-    execute_openai_assistant,
+    create_openai_assistant_executor,
 )
 from app.adapters.chat.query_tool_adapter import QueryToolAdapter
 from app.agents.repository import AgentPreferencesRepository
@@ -18,6 +18,7 @@ from app.database.connection import get_db_pool
 from app.logs.setup_logger import LOGGER
 from app.routes.chat.controllers.controller import ChatMessageController
 from app.routes.chat.services.service import ChatMessageService
+from app.settings.setting import get_settings
 
 
 async def execute_default_query(
@@ -25,7 +26,7 @@ async def execute_default_query(
     message: str,
 ) -> QueryResult:
     """
-    Executes the default analytical query implementation.
+    Execute the temporary analytical query implementation.
 
     This executor provides a temporary query result used by the dependency
     composition layer until the analytical query engine is integrated.
@@ -52,7 +53,7 @@ async def execute_default_chart(
     message: str,
 ) -> ChartResult:
     """
-    Generates the default chart implementation.
+    Generate the temporary chart implementation.
 
     This executor provides a temporary chart result used by the dependency
     composition layer until the chart generation engine is integrated.
@@ -80,7 +81,10 @@ def get_chat_message_workflow(
     pool: asyncpg.Pool,
 ) -> ChatMessageWorkflow:
     """
-    Creates the chat workflow with all required business dependencies.
+    Create the chat workflow with all required business dependencies.
+
+    Resolves application configuration in the composition layer and injects
+    the required OpenAI configuration into the assistant executor.
 
     Args:
         pool:
@@ -90,11 +94,20 @@ def get_chat_message_workflow(
         ChatMessageWorkflow:
             Fully configured chat workflow instance.
     """
+    settings = get_settings()
+
     repository = AgentPreferencesRepository(pool)
     preferences_workflow = AgentPreferencesWorkflow(repository)
 
     intent_detector = ChatIntentDetector()
-    assistant = AssistantAdapter(execute_openai_assistant)
+
+    openai_executor = create_openai_assistant_executor(
+        api_key=settings.openai.api_key,
+        model=settings.openai.model,
+    )
+
+    assistant = AssistantAdapter(openai_executor)
+
     query_tool = QueryToolAdapter(execute_default_query)
     chart_tool = ChartToolAdapter(execute_default_chart)
 
@@ -111,7 +124,7 @@ def get_chat_message_service(
     pool: asyncpg.Pool,
 ) -> ChatMessageService:
     """
-    Creates the chat application service.
+    Create the chat application service.
 
     Args:
         pool:
@@ -130,10 +143,10 @@ def get_chat_message_service(
 
 
 def get_chat_message_controller(
-    pool: asyncpg.Pool = Depends(get_db_pool), # noqa: B008
+    pool: asyncpg.Pool = Depends(get_db_pool),  # noqa: B008
 ) -> ChatMessageController:
     """
-    Creates the chat controller.
+    Create the chat controller.
 
     Args:
         pool:
