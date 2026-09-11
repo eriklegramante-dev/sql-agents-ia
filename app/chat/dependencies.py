@@ -1,40 +1,24 @@
 from uuid import UUID
 
+import asyncpg
+from fastapi import Depends
+
 from app.adapters.chat.assistant_adapter import AssistantAdapter
 from app.adapters.chat.chart_tool_adapter import ChartToolAdapter
+from app.adapters.chat.openai_assistant_executor import (
+    create_openai_assistant_executor,
+)
 from app.adapters.chat.query_tool_adapter import QueryToolAdapter
+from app.agents.repository import AgentPreferencesRepository
 from app.chat.intent_detector import ChatIntentDetector
-from app.chat.models import ChartResult, ChatPreferences, QueryResult
+from app.chat.models import ChartResult, QueryResult
 from app.core.agent_preferences.workflow import AgentPreferencesWorkflow
 from app.core.chat.workflow import ChatMessageWorkflow
+from app.database.connection import get_db_pool
 from app.logs.setup_logger import LOGGER
 from app.routes.chat.controllers.controller import ChatMessageController
 from app.routes.chat.services.service import ChatMessageService
-
-
-async def execute_default_assistant(
-    message: str,
-    preferences: ChatPreferences,
-) -> str:
-    """
-    Generates the default assistant response used by the dependency
-    composition layer.
-
-    This executor provides a temporary implementation until the
-    conversational assistant is integrated with the application.
-
-    Args:
-        message:
-            User message to be processed.
-
-        preferences:
-            Effective chat preferences applied to the generated response.
-
-    Returns:
-        str:
-            Temporary assistant response.
-    """
-    return f"{preferences.persona_name} received your message: {message}"
+from app.settings.setting import get_settings
 
 
 async def execute_default_query(
@@ -42,7 +26,7 @@ async def execute_default_query(
     message: str,
 ) -> QueryResult:
     """
-    Executes the default analytical query implementation.
+    Execute the temporary analytical query implementation.
 
     This executor provides a temporary query result used by the dependency
     composition layer until the analytical query engine is integrated.
@@ -69,7 +53,7 @@ async def execute_default_chart(
     message: str,
 ) -> ChartResult:
     """
-    Generates the default chart implementation.
+    Generate the temporary chart implementation.
 
     This executor provides a temporary chart result used by the dependency
     composition layer until the chart generation engine is integrated.
@@ -93,20 +77,37 @@ async def execute_default_chart(
     }
 
 
-def get_chat_message_workflow() -> ChatMessageWorkflow:
+def get_chat_message_workflow(
+    pool: asyncpg.Pool,
+) -> ChatMessageWorkflow:
     """
-    Creates the chat workflow with all required business dependencies.
+    Create the chat workflow with all required business dependencies.
 
-    Composes the workflow by injecting the agent preferences workflow and
-    the intent detector used during chat message processing.
+    Resolves application configuration in the composition layer and injects
+    the required OpenAI configuration into the assistant executor.
+
+    Args:
+        pool:
+            Shared asynchronous PostgreSQL connection pool.
 
     Returns:
         ChatMessageWorkflow:
             Fully configured chat workflow instance.
     """
-    preferences_workflow = AgentPreferencesWorkflow()
+    settings = get_settings()
+
+    repository = AgentPreferencesRepository(pool)
+    preferences_workflow = AgentPreferencesWorkflow(repository)
+
     intent_detector = ChatIntentDetector()
-    assistant = AssistantAdapter(execute_default_assistant)
+
+    openai_executor = create_openai_assistant_executor(
+        api_key=settings.openai.api_key,
+        model=settings.openai.model,
+    )
+
+    assistant = AssistantAdapter(openai_executor)
+
     query_tool = QueryToolAdapter(execute_default_query)
     chart_tool = ChartToolAdapter(execute_default_chart)
 
@@ -119,15 +120,21 @@ def get_chat_message_workflow() -> ChatMessageWorkflow:
     )
 
 
-def get_chat_message_service() -> ChatMessageService:
+def get_chat_message_service(
+    pool: asyncpg.Pool,
+) -> ChatMessageService:
     """
-    Creates the chat application service.
+    Create the chat application service.
+
+    Args:
+        pool:
+            Shared asynchronous PostgreSQL connection pool.
 
     Returns:
         ChatMessageService:
             Service configured with the chat workflow dependency.
     """
-    workflow = get_chat_message_workflow()
+    workflow = get_chat_message_workflow(pool)
 
     return ChatMessageService(
         workflow=workflow,
@@ -135,16 +142,23 @@ def get_chat_message_service() -> ChatMessageService:
     )
 
 
-def get_chat_message_controller() -> ChatMessageController:
+def get_chat_message_controller(
+    pool: asyncpg.Pool = Depends(get_db_pool),  # noqa: B008
+) -> ChatMessageController:
     """
-    Creates the chat controller.
+    Create the chat controller.
+
+    Args:
+        pool:
+            Shared asynchronous PostgreSQL connection pool provided
+            by FastAPI dependency injection.
 
     Returns:
         ChatMessageController:
             Controller configured with the required service and logger
             dependencies.
     """
-    service = get_chat_message_service()
+    service = get_chat_message_service(pool)
 
     return ChatMessageController(
         service=service,

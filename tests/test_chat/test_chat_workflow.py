@@ -10,7 +10,7 @@ class FakePreferencesWorkflow:
         self.preferences = preferences or {}
         self.received_user_id = None
 
-    def execute(self, user_id):
+    async def execute(self, user_id):
         self.received_user_id = user_id
         return self.preferences
 

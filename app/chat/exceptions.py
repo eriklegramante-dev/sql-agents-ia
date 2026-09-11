@@ -4,30 +4,6 @@ from app.prepare.exceptions import AppException
 class ChatException(AppException):
     """
     Base exception for predictable chat processing errors.
-
-    Carries the HTTP response information required by the chat controller
-    while keeping chat-specific failures grouped under a single exception
-    hierarchy.
-
-    Args:
-        message:
-            Human-readable error message returned to the client.
-        status_code:
-            HTTP status code associated with the chat error.
-        error_type:
-            Stable machine-readable chat error category.
-        details:
-            Optional validation or diagnostic information.
-
-    Attributes:
-        message:
-            Human-readable error message.
-        status_code:
-            HTTP status code used in the response.
-        error_type:
-            Machine-readable chat error category.
-        details:
-            Additional error details, empty when omitted.
     """
 
     def __init__(
@@ -46,7 +22,7 @@ class ChatException(AppException):
 
 
 class AssistantExecutionException(ChatException):
-    """Signals a failure while generating an assistant response."""
+    """Signals a generic failure while generating an assistant response."""
 
     def __init__(
         self,
@@ -56,6 +32,34 @@ class AssistantExecutionException(ChatException):
             message=message,
             status_code=500,
             error_type="assistant_execution_error",
+        )
+
+
+class AssistantUnavailableException(ChatException):
+    """Signals that the external assistant service is temporarily unavailable."""
+
+    def __init__(
+        self,
+        message: str = "The assistant service is temporarily unavailable.",
+    ) -> None:
+        super().__init__(
+            message=message,
+            status_code=503,
+            error_type="assistant_unavailable",
+        )
+
+
+class AssistantTimeoutException(ChatException):
+    """Signals that the external assistant service timed out."""
+
+    def __init__(
+        self,
+        message: str = "The assistant service took too long to respond.",
+    ) -> None:
+        super().__init__(
+            message=message,
+            status_code=504,
+            error_type="assistant_timeout",
         )
 
 
