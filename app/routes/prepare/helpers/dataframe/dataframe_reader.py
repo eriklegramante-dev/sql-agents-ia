@@ -29,7 +29,10 @@ class DataFrameReader:
         object_key_lower = object_key.lower()
 
         if object_key_lower.endswith(".csv"):
-            return pd.read_csv(BytesIO(file_data))
+            try:
+                return pd.read_csv(BytesIO(file_data), encoding='utf-8')
+            except UnicodeDecodeError:
+                return pd.read_csv(BytesIO(file_data), encoding='latin1')
 
         if object_key_lower.endswith(".xlsx"):
             return pd.read_excel(BytesIO(file_data))
