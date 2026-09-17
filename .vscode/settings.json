@@ -1,0 +1,15 @@
+{
+    "sqltools.connections": [
+        {
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 5432,
+            "driver": "PostgreSQL",
+            "name": "sqlagentsIA",
+            "database": "sql_agents",
+            "username": "postgres",
+            "password": "password"
+        }
+    ]
+}

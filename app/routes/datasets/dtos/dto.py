@@ -56,8 +56,8 @@ class DatasetResponseDataDTO(BaseModel):
     status: str
     object_key: str
     description: str | None = None
-    rows: int | None = None
-    columns: int | None = None
+    rows_count: int | None = None
+    columns_count: int | None = None
     null_values: float | None = None
     created_at: datetime
     updated_at: datetime
