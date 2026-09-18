@@ -31,5 +31,7 @@ class DatasetMetadata:
     status: str
     object_key: str
     description: str | None
+    rows_count: int | None      
+    columns_count: int | None   
     created_at: datetime
     updated_at: datetime

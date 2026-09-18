@@ -105,7 +105,9 @@ class DatasetRepository(BaseRepository[DatasetTable]):
                     file_type,
                     content_type,
                     file_size_bytes,
-                    current_upload_job_id
+                    current_upload_job_id,
+                    rows_count,
+                    columns_count
                 )
                 VALUES (
                     $1,
@@ -119,7 +121,9 @@ class DatasetRepository(BaseRepository[DatasetTable]):
                     $9,
                     $10,
                     $11,
-                    $12
+                    $12,
+                    $13,
+                    $14
                 )
                 """,
                 dataset.id,
@@ -134,6 +138,8 @@ class DatasetRepository(BaseRepository[DatasetTable]):
                 dataset.content_type,
                 dataset.file_size_bytes,
                 dataset.current_upload_job_id,
+                dataset.rows_count,   
+                dataset.columns_count,
             )
 
         return dataset
@@ -222,6 +228,8 @@ class DatasetRepository(BaseRepository[DatasetTable]):
                     description,
                     content_type,
                     file_size_bytes,
+                    rows_count,
+                    columns_count,
                     created_at,
                     updated_at
                 FROM datasets
@@ -242,6 +250,8 @@ class DatasetRepository(BaseRepository[DatasetTable]):
             status=DatasetStatus(row["status"]).value,
             object_key=row["raw_object_key"],
             description=row["description"],
+            rows_count=row["rows_count"],
+            columns_count=row["columns_count"],
             created_at=row["created_at"],
             updated_at=row["updated_at"],
         )

@@ -67,6 +67,8 @@ class DatasetService:
             status=result.status,
             object_key=result.object_key,
             description=result.description,
+            rows_count=result.rows_count,
+            columns_count=result.columns_count,
             created_at=result.created_at,
             updated_at=result.updated_at,
         )
