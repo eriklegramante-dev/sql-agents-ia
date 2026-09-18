@@ -105,7 +105,9 @@ class DatasetRepository(BaseRepository[DatasetTable]):
                     file_type,
                     content_type,
                     file_size_bytes,
-                    current_upload_job_id
+                    current_upload_job_id,
+                    rows_count,
+                    columns_count
                 )
                 VALUES (
                     $1,
@@ -119,7 +121,9 @@ class DatasetRepository(BaseRepository[DatasetTable]):
                     $9,
                     $10,
                     $11,
-                    $12
+                    $12,
+                    $13,
+                    $14
                 )
                 """,
                 dataset.id,
@@ -135,9 +139,7 @@ class DatasetRepository(BaseRepository[DatasetTable]):
                 dataset.file_size_bytes,
                 dataset.current_upload_job_id,
                 dataset.rows_count,   
-                dataset.columns_count,   
-                dataset.created_at,       
-                dataset.updated_at,
+                dataset.columns_count,
             )
 
         return dataset
