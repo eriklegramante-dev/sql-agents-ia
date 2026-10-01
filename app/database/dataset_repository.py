@@ -194,6 +194,56 @@ class DatasetRepository(BaseRepository[DatasetTable]):
 
         return self._build_dataset(row)
 
+
+    async def list_metadata(self) -> list[DatasetMetadata]:
+        """Retrieve metadata for all non-deleted datasets.
+
+        Returns:
+            Dataset metadata ordered from newest to oldest.
+        """
+
+        async with self.pool.acquire() as connection:
+            rows = await connection.fetch(
+                """
+                SELECT
+                    id,
+                    name,
+                    filename,
+                    status,
+                    raw_object_key,
+                    description,
+                    content_type,
+                    file_size_bytes,
+                    rows_count,
+                    columns_count,
+                    created_at,
+                    updated_at
+                FROM datasets
+                WHERE status <> $1
+                ORDER BY created_at DESC
+                """,
+                DatasetStatus.DELETED.value,
+            )
+
+        return [
+            DatasetMetadata(
+                dataset_id=row["id"],
+                name=row["name"],
+                original_filename=row["filename"],
+                content_type=row["content_type"],
+                file_size_bytes=row["file_size_bytes"],
+                status=DatasetStatus(row["status"]).value,
+                object_key=row["raw_object_key"],
+                description=row["description"],
+                rows_count=row["rows_count"],
+                columns_count=row["columns_count"],
+                created_at=row["created_at"],
+                updated_at=row["updated_at"],
+            )
+            for row in rows
+        ]
+
+
     async def get_metadata_by_id(
         self,
         dataset_id: UUID,

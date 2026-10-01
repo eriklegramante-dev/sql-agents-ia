@@ -4,6 +4,7 @@ from app.logs.setup_logger import LOGGER, LoggerManager
 from app.routes.datasets.dtos.dto import (
     DatasetDeleteResponseDataDTO,
     DatasetDeleteResponseDTO,
+    DatasetListResponseDTO,
     DatasetResponseDTO,
 )
 from app.routes.datasets.services.service import DatasetService
@@ -38,6 +39,32 @@ class DatasetController:
         """
         self.service = service
         self.logger = logger or LOGGER
+
+
+    async def list_datasets(self) -> DatasetListResponseDTO:
+        """Handle a dataset listing request.
+
+        Returns:
+            Standardized response containing all available dataset metadata.
+        """
+
+        self.logger.log_info(
+            "[dataset:list:controller] Received dataset listing request"
+        )
+
+        response_data = await self.service.list_datasets()
+
+        response = DatasetListResponseDTO(
+            success=True,
+            message="Datasets retrieved successfully.",
+            data=response_data,
+        )
+
+        self.logger.log_info(
+            "[dataset:list:controller] Dataset listing response created"
+        )
+
+        return response
 
     async def get_dataset(
         self,

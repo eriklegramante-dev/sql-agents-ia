@@ -124,3 +124,24 @@ class DatasetDeleteResponseDTO(BaseModel):
     message: str
     data: DatasetDeleteResponseDataDTO | None = None
     errors: list[str] | None = None
+
+class DatasetListResponseDTO(BaseModel):
+    """Standard response returned by the dataset listing route.
+
+    Attributes:
+        success: Indicates whether the listing operation was successful.
+        message: Human-readable result of the listing operation.
+        data: Dataset metadata returned by the listing operation.
+        errors: Optional errors produced during the listing operation.
+
+    Args:
+        success: Success flag used to create the response.
+        message: Response message used to create the response.
+        data: Dataset metadata included in the response.
+        errors: Errors included when the listing operation fails.
+    """
+
+    success: bool
+    message: str
+    data: list[DatasetResponseDataDTO]
+    errors: list[str] | None = None

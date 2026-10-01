@@ -8,6 +8,7 @@ from app.adapters.storage.minio_multipart_client_adapter import (
 from app.connections.minio import get_minio_client
 from app.core.datasets.deletion_workflow import DatasetDeletionWorkflow
 from app.core.datasets.repository import DatasetRepository
+from app.core.datasets.list_workflow import DatasetListWorkflow
 from app.core.datasets.workflow import DatasetWorkflow
 from app.database.connection import get_db_pool
 from app.database.dataset_repository import (
@@ -72,6 +73,11 @@ async def get_dataset_controller() -> DatasetController:
         logger=LOGGER,
     )
 
+    list_workflow = DatasetListWorkflow(
+        dataset_repository=repository,
+        logger=LOGGER,
+    )
+
     deletion_workflow = DatasetDeletionWorkflow(
         dataset_repository=repository,
         storage=storage,
@@ -82,6 +88,7 @@ async def get_dataset_controller() -> DatasetController:
     service = DatasetService(
         workflow=retrieval_workflow,
         deletion_workflow=deletion_workflow,
+        list_workflow=list_workflow,
         logger=LOGGER,
     )
 

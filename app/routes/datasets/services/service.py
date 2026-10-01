@@ -7,6 +7,7 @@ from app.core.datasets.deletion_workflow import (
 from app.core.datasets.workflow import DatasetWorkflow
 from app.logs.setup_logger import LOGGER, LoggerManager
 from app.routes.datasets.dtos.dto import DatasetResponseDataDTO
+from app.core.datasets.list_workflow import DatasetListWorkflow
 
 
 class DatasetService:
@@ -17,6 +18,7 @@ class DatasetService:
 
     Attributes:
         workflow: Workflow responsible for dataset retrieval.
+        list_workflow: Workflow responsible for dataset listing.
         deletion_workflow: Workflow responsible for dataset deletion.
         logger: Logger used to record service execution events.
     """
@@ -24,6 +26,7 @@ class DatasetService:
     def __init__(
         self,
         workflow: DatasetWorkflow,
+        list_workflow: DatasetListWorkflow,
         deletion_workflow: DatasetDeletionWorkflow,
         logger: LoggerManager | None = None,
     ) -> None:
@@ -31,12 +34,52 @@ class DatasetService:
 
         Args:
             workflow: Workflow responsible for dataset retrieval.
+            list_workflow: Workflow responsible for dataset listing.
             deletion_workflow: Workflow responsible for dataset deletion.
             logger: Optional logger used to register service events.
         """
         self.workflow = workflow
+        self.list_workflow = list_workflow
         self.deletion_workflow = deletion_workflow
         self.logger = logger or LOGGER
+
+    async def list_datasets(self) -> list[DatasetResponseDataDTO]:
+        """List dataset metadata and convert it to response data.
+
+        Returns:
+            Dataset metadata formatted for the API response.
+        """
+
+        self.logger.log_info(
+            "[dataset:list:service] Starting dataset listing"
+        )
+
+        datasets = await self.list_workflow.execute()
+
+        response_data = [
+            DatasetResponseDataDTO(
+                dataset_id=dataset.dataset_id,
+                name=dataset.name,
+                original_filename=dataset.original_filename,
+                content_type=dataset.content_type,
+                file_size_bytes=dataset.file_size_bytes,
+                status=dataset.status,
+                object_key=dataset.object_key,
+                description=dataset.description,
+                rows_count=dataset.rows_count,
+                columns_count=dataset.columns_count,
+                created_at=dataset.created_at,
+                updated_at=dataset.updated_at,
+            )
+            for dataset in datasets
+        ]   
+
+        self.logger.log_info(
+            f"[dataset:list:service] Dataset listing finished: "
+            f"{len(response_data)} dataset(s)"
+        )
+
+        return response_data
 
     async def get_dataset(
         self,
