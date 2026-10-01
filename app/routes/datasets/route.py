@@ -8,6 +8,7 @@ from app.routes.datasets.controllers.controller import DatasetController
 from app.routes.datasets.dependencies.dependence import get_dataset_controller
 from app.routes.datasets.dtos.dto import (
     DatasetDeleteResponseDTO,
+    DatasetListResponseDTO,
     DatasetResponseDTO,
 )
 
@@ -15,6 +16,44 @@ router = APIRouter(
     prefix="",
     tags=["Datasets"],
 )
+
+@router.get(
+    "/datasets",
+    response_model=DatasetListResponseDTO,
+    status_code=status.HTTP_200_OK,
+)
+async def list_datasets(
+    controller: Annotated[
+        DatasetController,
+        Depends(get_dataset_controller),
+    ],
+) -> DatasetListResponseDTO:
+    """List available dataset metadata.
+
+    Args:
+        controller: Injected controller responsible for dataset operations.
+
+    Returns:
+        Standardized response containing all available dataset metadata.
+
+    Raises:
+        HTTPException:
+            If the dataset listing fails due to an application error.
+    """
+
+    try:
+        return await controller.list_datasets()
+
+    except AppException as error:
+        raise HTTPException(
+            status_code=error.status_code,
+            detail={
+                "success": False,
+                "message": error.message,
+                "data": None,
+                "errors": error.details,
+            },
+        ) from error
 
 
 @router.get(

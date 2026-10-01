@@ -64,3 +64,12 @@ class DatasetRepository(Protocol):
                 If the related-record cleanup cannot be completed.
         """
         ...
+
+
+    async def list_metadata(self) -> list[DatasetMetadata]:
+        """Retrieve metadata for all available datasets.
+
+        Returns:
+            Dataset metadata ordered from newest to oldest.
+        """
+        ...
