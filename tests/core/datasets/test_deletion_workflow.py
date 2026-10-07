@@ -83,6 +83,9 @@ class FakeRepository:
                 status=status.value,
                 object_key=self.dataset.object_key,
                 description=self.dataset.description,
+                rows_count=self.dataset.rows_count,
+                columns_count=self.dataset.columns_count,
+                profile=self.dataset.profile,
                 created_at=self.dataset.created_at,
                 updated_at=datetime.now(UTC),
             )
@@ -91,7 +94,7 @@ class FakeRepository:
 
 
 class FakeStorage:
-    """Fake storage adapter used by deletion workflow tests."""
+    """Fake storage adapter used by dataset deletion workflow tests."""
 
     def __init__(self) -> None:
         self.deleted = True
@@ -129,6 +132,9 @@ def make_dataset(
         status=status.value,
         object_key="datasets/customers.csv",
         description="Dataset used in deletion tests",
+        rows_count=None,
+        columns_count=None,
+        profile=None,
         created_at=now,
         updated_at=now,
     )

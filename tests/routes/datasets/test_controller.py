@@ -18,6 +18,8 @@ class FakeDatasetService:
         self.error: Exception | None = None
         self.received_dataset_id: UUID | None = None
         self.already_deleted = False
+        self.datasets: list[DatasetResponseDataDTO] = []
+        self.list_datasets_called = False
 
     async def get_dataset(
         self,
@@ -44,6 +46,17 @@ class FakeDatasetService:
             updated_at=now,
         )
 
+    async def list_datasets(
+        self,
+    ) -> list[DatasetResponseDataDTO]:
+        """Return configured dataset metadata for listing tests."""
+        self.list_datasets_called = True
+
+        if self.error is not None:
+            raise self.error
+
+        return self.datasets
+
     async def delete_dataset(
         self,
         dataset_id: UUID,
@@ -65,6 +78,9 @@ class FakeDatasetService:
             status=DatasetStatus.DELETED.value,
             object_key="datasets/customers.csv",
             description="Dataset used in tests",
+            rows_count=None,
+            columns_count=None,
+            profile=None,
             created_at=now,
             updated_at=now,
         )
@@ -114,6 +130,92 @@ async def test_get_dataset_propagates_not_found_exception():
         )
 
     assert str(exc.value) == "Dataset not found."
+
+
+@pytest.mark.asyncio
+async def test_list_datasets_returns_success_response():
+    """Return a standardized response for successful dataset listing."""
+    service = FakeDatasetService()
+    now = datetime.now(UTC)
+    dataset_id = uuid4()
+
+    service.datasets = [
+        DatasetResponseDataDTO(
+            dataset_id=dataset_id,
+            name="Customers",
+            original_filename="customers.csv",
+            content_type="text/csv",
+            file_size_bytes=1024,
+            status=DatasetStatus.PROFILED.value,
+            object_key="datasets/customers.csv",
+            description="Dataset used in tests",
+            rows_count=100,
+            columns_count=5,
+            total_nulls=0,
+            columns_with_nulls=0,
+            numeric_columns=2,
+            datetime_columns=1,
+            text_columns=2,
+            quality_warnings=[
+                "Dataset warning.",
+            ],
+            created_at=now,
+            updated_at=now,
+        ),
+    ]
+
+    controller = DatasetController(
+        service=service,
+    )
+
+    response = await controller.list_datasets()
+
+    assert response.success is True
+    assert response.message == "Datasets retrieved successfully."
+    assert len(response.data) == 1
+    assert response.data[0].dataset_id == dataset_id
+    assert response.data[0].total_nulls == 0
+    assert response.data[0].numeric_columns == 2
+    assert response.data[0].datetime_columns == 1
+    assert response.data[0].text_columns == 2
+    assert response.data[0].quality_warnings == [
+        "Dataset warning.",
+    ]
+    assert service.list_datasets_called is True
+
+
+@pytest.mark.asyncio
+async def test_list_datasets_returns_empty_success_response():
+    """Return a successful response when no active datasets exist."""
+    service = FakeDatasetService()
+
+    controller = DatasetController(
+        service=service,
+    )
+
+    response = await controller.list_datasets()
+
+    assert response.success is True
+    assert response.message == "Datasets retrieved successfully."
+    assert response.data == []
+    assert service.list_datasets_called is True
+
+
+@pytest.mark.asyncio
+async def test_list_datasets_propagates_service_exception():
+    """Propagate listing errors raised by the dataset service."""
+    service = FakeDatasetService()
+    service.error = NotFoundException("Dataset listing failed.")
+
+    controller = DatasetController(
+        service=service,
+    )
+
+    with pytest.raises(NotFoundException) as exc:
+        await controller.list_datasets()
+
+    assert str(exc.value) == "Dataset listing failed."
+    assert service.list_datasets_called is True
 
 
 @pytest.mark.asyncio

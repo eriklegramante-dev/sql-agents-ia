@@ -14,7 +14,9 @@ class FakeRepository:
 
     def __init__(self) -> None:
         self.dataset: DatasetMetadata | None = None
+        self.datasets: list[DatasetMetadata] = []
         self.received_dataset_id: UUID | None = None
+        self.list_metadata_called = False
 
     async def get_metadata_by_id(
         self,
@@ -23,6 +25,13 @@ class FakeRepository:
         """Return the configured dataset metadata."""
         self.received_dataset_id = dataset_id
         return self.dataset
+
+    async def list_metadata(
+        self,
+    ) -> list[DatasetMetadata]:
+        """Return the configured dataset metadata collection."""
+        self.list_metadata_called = True
+        return self.datasets
 
 
 def make_dataset() -> DatasetMetadata:
@@ -38,6 +47,9 @@ def make_dataset() -> DatasetMetadata:
         status=DatasetStatus.COMPLETED.value,
         object_key="datasets/customers.csv",
         description="Dataset used in tests",
+        rows_count=100,
+        columns_count=5,
+        profile=None,
         created_at=now,
         updated_at=now,
     )
@@ -65,6 +77,9 @@ async def test_execute_returns_dataset_metadata():
     assert response.status == DatasetStatus.COMPLETED.value
     assert response.object_key == "datasets/customers.csv"
     assert response.description == "Dataset used in tests"
+    assert response.rows_count == 100
+    assert response.columns_count == 5
+    assert response.profile is None
     assert repository.received_dataset_id == repository.dataset.dataset_id
 
 
@@ -103,3 +118,38 @@ async def test_execute_accepts_status_as_plain_string():
     )
 
     assert response.status == "COMPLETED"
+
+
+@pytest.mark.asyncio
+async def test_list_datasets_returns_dataset_metadata():
+    """Return all dataset metadata provided by the repository."""
+    repository = FakeRepository()
+    repository.datasets = [
+        make_dataset(),
+        make_dataset(),
+    ]
+
+    workflow = DatasetWorkflow(
+        dataset_repository=repository,
+    )
+
+    response = await workflow.list_datasets()
+
+    assert response == repository.datasets
+    assert len(response) == 2
+    assert repository.list_metadata_called is True
+
+
+@pytest.mark.asyncio
+async def test_list_datasets_returns_empty_list():
+    """Return an empty collection when no active datasets exist."""
+    repository = FakeRepository()
+
+    workflow = DatasetWorkflow(
+        dataset_repository=repository,
+    )
+
+    response = await workflow.list_datasets()
+
+    assert response == []
+    assert repository.list_metadata_called is True
