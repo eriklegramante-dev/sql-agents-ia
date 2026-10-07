@@ -17,8 +17,6 @@ class FakeWorkflow:
     def __init__(self) -> None:
         self.error: Exception | None = None
         self.received_dataset_id: UUID | None = None
-        self.datasets: list[DatasetMetadata] = []
-        self.list_datasets_called = False
 
     async def execute(
         self,
@@ -48,11 +46,17 @@ class FakeWorkflow:
             updated_at=now,
         )
 
-    async def list_datasets(
-        self,
-    ) -> list[DatasetMetadata]:
-        """Return configured dataset metadata for listing tests."""
-        self.list_datasets_called = True
+
+class FakeListWorkflow:
+    """Fake listing workflow used by dataset service tests."""
+
+    def __init__(self) -> None:
+        self.datasets: list[DatasetMetadata] = []
+        self.execute_called = False
+
+    async def execute(self) -> list[DatasetMetadata]:
+        """Return the configured dataset metadata collection."""
+        self.execute_called = True
         return self.datasets
 
 
@@ -102,10 +106,12 @@ class FakeDeletionWorkflow:
 async def test_get_dataset_returns_response_data():
     """Convert workflow domain metadata into dataset response data."""
     workflow = FakeWorkflow()
+    list_workflow = FakeListWorkflow()
     deletion_workflow = FakeDeletionWorkflow()
 
     service = DatasetService(
         workflow=workflow,
+        list_workflow=list_workflow,
         deletion_workflow=deletion_workflow,
     )
 
@@ -131,12 +137,14 @@ async def test_get_dataset_returns_response_data():
 async def test_get_dataset_propagates_not_found_exception():
     """Propagate retrieval errors raised by the dataset workflow."""
     workflow = FakeWorkflow()
+    list_workflow = FakeListWorkflow()
     deletion_workflow = FakeDeletionWorkflow()
 
     workflow.error = NotFoundException("Dataset not found.")
 
     service = DatasetService(
         workflow=workflow,
+        list_workflow=list_workflow,
         deletion_workflow=deletion_workflow,
     )
 
@@ -150,10 +158,11 @@ async def test_get_dataset_propagates_not_found_exception():
 async def test_list_datasets_returns_response_data():
     """Convert listed domain metadata into dataset response data."""
     workflow = FakeWorkflow()
+    list_workflow = FakeListWorkflow()
     deletion_workflow = FakeDeletionWorkflow()
     now = datetime.now(UTC)
 
-    workflow.datasets = [
+    list_workflow.datasets = [
         DatasetMetadata(
             dataset_id=uuid4(),
             name="Customers",
@@ -182,12 +191,13 @@ async def test_list_datasets_returns_response_data():
 
     service = DatasetService(
         workflow=workflow,
+        list_workflow=list_workflow,
         deletion_workflow=deletion_workflow,
     )
 
     response = await service.list_datasets()
 
-    assert workflow.list_datasets_called is True
+    assert list_workflow.execute_called is True
     assert len(response) == 1
 
     dataset = response[0]
@@ -196,7 +206,7 @@ async def test_list_datasets_returns_response_data():
         dataset,
         DatasetResponseDataDTO,
     )
-    assert dataset.dataset_id == workflow.datasets[0].dataset_id
+    assert dataset.dataset_id == list_workflow.datasets[0].dataset_id
     assert dataset.name == "Customers"
     assert dataset.rows_count == 100
     assert dataset.columns_count == 5
@@ -214,10 +224,11 @@ async def test_list_datasets_returns_response_data():
 async def test_list_datasets_preserves_unavailable_profile():
     """Keep profiling fields unavailable when no profile exists."""
     workflow = FakeWorkflow()
+    list_workflow = FakeListWorkflow()
     deletion_workflow = FakeDeletionWorkflow()
     now = datetime.now(UTC)
 
-    workflow.datasets = [
+    list_workflow.datasets = [
         DatasetMetadata(
             dataset_id=uuid4(),
             name="Customers",
@@ -237,6 +248,7 @@ async def test_list_datasets_preserves_unavailable_profile():
 
     service = DatasetService(
         workflow=workflow,
+        list_workflow=list_workflow,
         deletion_workflow=deletion_workflow,
     )
 
@@ -258,16 +270,18 @@ async def test_list_datasets_preserves_unavailable_profile():
 async def test_list_datasets_returns_empty_list():
     """Return an empty collection when the workflow has no datasets."""
     workflow = FakeWorkflow()
+    list_workflow = FakeListWorkflow()
     deletion_workflow = FakeDeletionWorkflow()
 
     service = DatasetService(
         workflow=workflow,
+        list_workflow=list_workflow,
         deletion_workflow=deletion_workflow,
     )
 
     response = await service.list_datasets()
 
-    assert workflow.list_datasets_called is True
+    assert list_workflow.execute_called is True
     assert response == []
 
 
@@ -275,10 +289,12 @@ async def test_list_datasets_returns_empty_list():
 async def test_delete_dataset_returns_deletion_result():
     """Return the result produced by the dataset deletion workflow."""
     workflow = FakeWorkflow()
+    list_workflow = FakeListWorkflow()
     deletion_workflow = FakeDeletionWorkflow()
 
     service = DatasetService(
         workflow=workflow,
+        list_workflow=list_workflow,
         deletion_workflow=deletion_workflow,
     )
 
@@ -298,12 +314,14 @@ async def test_delete_dataset_returns_deletion_result():
 async def test_delete_dataset_returns_already_deleted_result():
     """Preserve the already-deleted state returned by the workflow."""
     workflow = FakeWorkflow()
+    list_workflow = FakeListWorkflow()
     deletion_workflow = FakeDeletionWorkflow()
 
     deletion_workflow.already_deleted = True
 
     service = DatasetService(
         workflow=workflow,
+        list_workflow=list_workflow,
         deletion_workflow=deletion_workflow,
     )
 
@@ -319,12 +337,14 @@ async def test_delete_dataset_returns_already_deleted_result():
 async def test_delete_dataset_propagates_not_found_exception():
     """Propagate deletion errors raised by the deletion workflow."""
     workflow = FakeWorkflow()
+    list_workflow = FakeListWorkflow()
     deletion_workflow = FakeDeletionWorkflow()
 
     deletion_workflow.error = NotFoundException("Dataset not found.")
 
     service = DatasetService(
         workflow=workflow,
+        list_workflow=list_workflow,
         deletion_workflow=deletion_workflow,
     )
 
