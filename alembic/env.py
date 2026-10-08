@@ -15,7 +15,7 @@ database_url = (
     f"{os.getenv('DB_USER', 'postgres')}:"
     f"{os.getenv('DB_PASSWORD', 'password')}@"
     f"{os.getenv('DB_HOST', 'localhost')}:"
-    f"{os.getenv('DB_PORT', '5434')}/"
+    f"{os.getenv('DB_PORT', '5433')}/"
     f"{os.getenv('DB_NAME', 'sql_agents')}"
 )
 
