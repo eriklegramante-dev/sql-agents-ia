@@ -32,18 +32,14 @@ class DatasetResponseDataDTO(BaseModel):
         status: Current dataset processing status.
         object_key: Raw object key stored in object storage.
         description: Optional dataset description.
-        created_at: Dataset creation timestamp.
-        updated_at: Dataset last update timestamp.
-
-    Args:
-        dataset_id: Dataset identifier used to create the response.
-        name: Dataset name used to create the response.
-        original_filename: Original filename used to create the response.
-        content_type: Content type used to create the response.
-        file_size_bytes: File size used to create the response.
-        status: Dataset status used to create the response.
-        object_key: Object storage key used to create the response.
-        description: Dataset description used to create the response.
+        rows_count: Number of rows in the prepared dataset.
+        columns_count: Number of columns in the prepared dataset.
+        total_nulls: Total number of null cells found during profiling.
+        columns_with_nulls: Number of columns containing null values.
+        numeric_columns: Number of columns classified as numeric.
+        datetime_columns: Number of columns classified as datetime.
+        text_columns: Number of columns classified as text.
+        quality_warnings: Data quality warnings generated during profiling.
         created_at: Dataset creation timestamp.
         updated_at: Dataset last update timestamp.
     """
@@ -58,7 +54,12 @@ class DatasetResponseDataDTO(BaseModel):
     description: str | None = None
     rows_count: int | None = None
     columns_count: int | None = None
-    null_values: float | None = None
+    total_nulls: int | None = None
+    columns_with_nulls: int | None = None
+    numeric_columns: int | None = None
+    datetime_columns: int | None = None
+    text_columns: int | None = None
+    quality_warnings: list[str] | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -82,6 +83,28 @@ class DatasetResponseDTO(BaseModel):
     success: bool
     message: str
     data: DatasetResponseDataDTO | None = None
+    errors: list[str] | None = None
+
+
+class DatasetListResponseDTO(BaseModel):
+    """Standard response returned by the dataset listing route.
+
+    Attributes:
+        success: Indicates whether the listing operation was successful.
+        message: Human-readable result of the listing operation.
+        data: Collection of active dataset metadata.
+        errors: Optional errors produced during the operation.
+
+    Args:
+        success: Success flag used to create the response.
+        message: Response message used to create the response.
+        data: Dataset metadata collection included in the response.
+        errors: Errors included when the operation fails.
+    """
+
+    success: bool
+    message: str
+    data: list[DatasetResponseDataDTO]
     errors: list[str] | None = None
 
 

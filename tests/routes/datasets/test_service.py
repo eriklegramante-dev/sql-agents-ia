@@ -4,7 +4,7 @@ from uuid import UUID, uuid4
 import pytest
 
 from app.core.datasets.deletion_workflow import DatasetDeletionResult
-from app.core.datasets.models import DatasetMetadata
+from app.core.datasets.models import DatasetMetadata, DatasetProfileSummary
 from app.enums.dataset_status import DatasetStatus
 from app.prepare.exceptions import NotFoundException
 from app.routes.datasets.dtos.dto import DatasetResponseDataDTO
@@ -39,9 +39,25 @@ class FakeWorkflow:
             status=DatasetStatus.COMPLETED.value,
             object_key="datasets/customers.csv",
             description="Dataset for tests",
+            rows_count=100,
+            columns_count=5,
+            profile=None,
             created_at=now,
             updated_at=now,
         )
+
+
+class FakeListWorkflow:
+    """Fake listing workflow used by dataset service tests."""
+
+    def __init__(self) -> None:
+        self.datasets: list[DatasetMetadata] = []
+        self.execute_called = False
+
+    async def execute(self) -> list[DatasetMetadata]:
+        """Return the configured dataset metadata collection."""
+        self.execute_called = True
+        return self.datasets
 
 
 class FakeDeletionWorkflow:
@@ -73,6 +89,9 @@ class FakeDeletionWorkflow:
             status=DatasetStatus.DELETED.value,
             object_key="datasets/customers.csv",
             description="Dataset for tests",
+            rows_count=100,
+            columns_count=5,
+            profile=None,
             created_at=now,
             updated_at=now,
         )
@@ -87,10 +106,12 @@ class FakeDeletionWorkflow:
 async def test_get_dataset_returns_response_data():
     """Convert workflow domain metadata into dataset response data."""
     workflow = FakeWorkflow()
+    list_workflow = FakeListWorkflow()
     deletion_workflow = FakeDeletionWorkflow()
 
     service = DatasetService(
         workflow=workflow,
+        list_workflow=list_workflow,
         deletion_workflow=deletion_workflow,
     )
 
@@ -116,12 +137,14 @@ async def test_get_dataset_returns_response_data():
 async def test_get_dataset_propagates_not_found_exception():
     """Propagate retrieval errors raised by the dataset workflow."""
     workflow = FakeWorkflow()
+    list_workflow = FakeListWorkflow()
     deletion_workflow = FakeDeletionWorkflow()
 
     workflow.error = NotFoundException("Dataset not found.")
 
     service = DatasetService(
         workflow=workflow,
+        list_workflow=list_workflow,
         deletion_workflow=deletion_workflow,
     )
 
@@ -132,13 +155,146 @@ async def test_get_dataset_propagates_not_found_exception():
 
 
 @pytest.mark.asyncio
-async def test_delete_dataset_returns_deletion_result():
-    """Return the result produced by the dataset deletion workflow."""
+async def test_list_datasets_returns_response_data():
+    """Convert listed domain metadata into dataset response data."""
     workflow = FakeWorkflow()
+    list_workflow = FakeListWorkflow()
+    deletion_workflow = FakeDeletionWorkflow()
+    now = datetime.now(UTC)
+
+    list_workflow.datasets = [
+        DatasetMetadata(
+            dataset_id=uuid4(),
+            name="Customers",
+            original_filename="customers.csv",
+            content_type="text/csv",
+            file_size_bytes=1024,
+            status=DatasetStatus.PROFILED.value,
+            object_key="datasets/customers.csv",
+            description="Dataset for tests",
+            rows_count=100,
+            columns_count=5,
+            profile=DatasetProfileSummary(
+                total_nulls=0,
+                columns_with_nulls=0,
+                numeric_columns=2,
+                datetime_columns=1,
+                text_columns=2,
+                quality_warnings=(
+                    "Dataset warning.",
+                ),
+            ),
+            created_at=now,
+            updated_at=now,
+        ),
+    ]
+
+    service = DatasetService(
+        workflow=workflow,
+        list_workflow=list_workflow,
+        deletion_workflow=deletion_workflow,
+    )
+
+    response = await service.list_datasets()
+
+    assert list_workflow.execute_called is True
+    assert len(response) == 1
+
+    dataset = response[0]
+
+    assert isinstance(
+        dataset,
+        DatasetResponseDataDTO,
+    )
+    assert dataset.dataset_id == list_workflow.datasets[0].dataset_id
+    assert dataset.name == "Customers"
+    assert dataset.rows_count == 100
+    assert dataset.columns_count == 5
+    assert dataset.total_nulls == 0
+    assert dataset.columns_with_nulls == 0
+    assert dataset.numeric_columns == 2
+    assert dataset.datetime_columns == 1
+    assert dataset.text_columns == 2
+    assert dataset.quality_warnings == [
+        "Dataset warning.",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_list_datasets_preserves_unavailable_profile():
+    """Keep profiling fields unavailable when no profile exists."""
+    workflow = FakeWorkflow()
+    list_workflow = FakeListWorkflow()
+    deletion_workflow = FakeDeletionWorkflow()
+    now = datetime.now(UTC)
+
+    list_workflow.datasets = [
+        DatasetMetadata(
+            dataset_id=uuid4(),
+            name="Customers",
+            original_filename="customers.csv",
+            content_type="text/csv",
+            file_size_bytes=1024,
+            status=DatasetStatus.COMPLETED.value,
+            object_key="datasets/customers.csv",
+            description="Dataset for tests",
+            rows_count=100,
+            columns_count=5,
+            profile=None,
+            created_at=now,
+            updated_at=now,
+        ),
+    ]
+
+    service = DatasetService(
+        workflow=workflow,
+        list_workflow=list_workflow,
+        deletion_workflow=deletion_workflow,
+    )
+
+    response = await service.list_datasets()
+
+    assert len(response) == 1
+
+    dataset = response[0]
+
+    assert dataset.total_nulls is None
+    assert dataset.columns_with_nulls is None
+    assert dataset.numeric_columns is None
+    assert dataset.datetime_columns is None
+    assert dataset.text_columns is None
+    assert dataset.quality_warnings is None
+
+
+@pytest.mark.asyncio
+async def test_list_datasets_returns_empty_list():
+    """Return an empty collection when the workflow has no datasets."""
+    workflow = FakeWorkflow()
+    list_workflow = FakeListWorkflow()
     deletion_workflow = FakeDeletionWorkflow()
 
     service = DatasetService(
         workflow=workflow,
+        list_workflow=list_workflow,
+        deletion_workflow=deletion_workflow,
+    )
+
+    response = await service.list_datasets()
+
+    assert list_workflow.execute_called is True
+    assert response == []
+
+
+@pytest.mark.asyncio
+async def test_delete_dataset_returns_deletion_result():
+    """Return the result produced by the dataset deletion workflow."""
+    workflow = FakeWorkflow()
+    list_workflow = FakeListWorkflow()
+    deletion_workflow = FakeDeletionWorkflow()
+
+    service = DatasetService(
+        workflow=workflow,
+        list_workflow=list_workflow,
         deletion_workflow=deletion_workflow,
     )
 
@@ -158,12 +314,14 @@ async def test_delete_dataset_returns_deletion_result():
 async def test_delete_dataset_returns_already_deleted_result():
     """Preserve the already-deleted state returned by the workflow."""
     workflow = FakeWorkflow()
+    list_workflow = FakeListWorkflow()
     deletion_workflow = FakeDeletionWorkflow()
 
     deletion_workflow.already_deleted = True
 
     service = DatasetService(
         workflow=workflow,
+        list_workflow=list_workflow,
         deletion_workflow=deletion_workflow,
     )
 
@@ -179,12 +337,14 @@ async def test_delete_dataset_returns_already_deleted_result():
 async def test_delete_dataset_propagates_not_found_exception():
     """Propagate deletion errors raised by the deletion workflow."""
     workflow = FakeWorkflow()
+    list_workflow = FakeListWorkflow()
     deletion_workflow = FakeDeletionWorkflow()
 
     deletion_workflow.error = NotFoundException("Dataset not found.")
 
     service = DatasetService(
         workflow=workflow,
+        list_workflow=list_workflow,
         deletion_workflow=deletion_workflow,
     )
 

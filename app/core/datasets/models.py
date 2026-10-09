@@ -4,6 +4,27 @@ from uuid import UUID
 
 
 @dataclass(frozen=True)
+class DatasetProfileSummary:
+    """Domain model representing summarized dataset profiling information.
+
+    Attributes:
+        total_nulls: Total number of null cells in the dataset.
+        columns_with_nulls: Number of columns containing null values.
+        numeric_columns: Number of columns classified as numeric.
+        datetime_columns: Number of columns classified as datetime.
+        text_columns: Number of columns classified as text.
+        quality_warnings: Data quality warnings generated during profiling.
+    """
+
+    total_nulls: int
+    columns_with_nulls: int
+    numeric_columns: int
+    datetime_columns: int
+    text_columns: int
+    quality_warnings: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class DatasetMetadata:
     """Domain model representing dataset metadata.
 
@@ -19,6 +40,9 @@ class DatasetMetadata:
         status: Current dataset processing status.
         object_key: Raw object key stored in object storage.
         description: Optional dataset description.
+        rows_count: Number of rows in the prepared dataset.
+        columns_count: Number of columns in the prepared dataset.
+        profile: Optional summarized profiling information.
         created_at: Dataset creation timestamp.
         updated_at: Dataset last update timestamp.
     """
@@ -31,7 +55,8 @@ class DatasetMetadata:
     status: str
     object_key: str
     description: str | None
-    rows_count: int | None      
-    columns_count: int | None   
+    rows_count: int | None
+    columns_count: int | None
+    profile: DatasetProfileSummary | None
     created_at: datetime
     updated_at: datetime

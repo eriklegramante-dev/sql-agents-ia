@@ -38,6 +38,9 @@ def make_dataset() -> DatasetMetadata:
         status=DatasetStatus.COMPLETED.value,
         object_key="datasets/customers.csv",
         description="Dataset used in tests",
+        rows_count=100,
+        columns_count=5,
+        profile=None,
         created_at=now,
         updated_at=now,
     )
@@ -65,6 +68,9 @@ async def test_execute_returns_dataset_metadata():
     assert response.status == DatasetStatus.COMPLETED.value
     assert response.object_key == "datasets/customers.csv"
     assert response.description == "Dataset used in tests"
+    assert response.rows_count == 100
+    assert response.columns_count == 5
+    assert response.profile is None
     assert repository.received_dataset_id == repository.dataset.dataset_id
 
 

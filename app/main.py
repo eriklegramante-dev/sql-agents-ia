@@ -4,6 +4,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.settings.setting import get_settings
 from app.routes.router import api_router
 from app.settings.app_config import app_config
+from app.settings.setting import get_settings
+
+settings = get_settings()
 
 settings = get_settings()
 

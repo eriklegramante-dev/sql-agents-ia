@@ -4,10 +4,11 @@ from app.core.datasets.deletion_workflow import (
     DatasetDeletionResult,
     DatasetDeletionWorkflow,
 )
+from app.core.datasets.list_workflow import DatasetListWorkflow
+from app.core.datasets.models import DatasetMetadata
 from app.core.datasets.workflow import DatasetWorkflow
 from app.logs.setup_logger import LOGGER, LoggerManager
 from app.routes.datasets.dtos.dto import DatasetResponseDataDTO
-from app.core.datasets.list_workflow import DatasetListWorkflow
 
 
 class DatasetService:
@@ -43,13 +44,73 @@ class DatasetService:
         self.deletion_workflow = deletion_workflow
         self.logger = logger or LOGGER
 
-    async def list_datasets(self) -> list[DatasetResponseDataDTO]:
+    @staticmethod
+    def _to_response_data(
+        result: DatasetMetadata,
+    ) -> DatasetResponseDataDTO:
+        """Convert dataset domain metadata into API response data.
+
+        Args:
+            result: Dataset metadata returned by the core workflow.
+
+        Returns:
+            Dataset metadata formatted for the API response.
+        """
+        profile = result.profile
+
+        return DatasetResponseDataDTO(
+            dataset_id=result.dataset_id,
+            name=result.name,
+            original_filename=result.original_filename,
+            content_type=result.content_type,
+            file_size_bytes=result.file_size_bytes,
+            status=result.status,
+            object_key=result.object_key,
+            description=result.description,
+            rows_count=result.rows_count,
+            columns_count=result.columns_count,
+            total_nulls=(
+                profile.total_nulls
+                if profile is not None
+                else None
+            ),
+            columns_with_nulls=(
+                profile.columns_with_nulls
+                if profile is not None
+                else None
+            ),
+            numeric_columns=(
+                profile.numeric_columns
+                if profile is not None
+                else None
+            ),
+            datetime_columns=(
+                profile.datetime_columns
+                if profile is not None
+                else None
+            ),
+            text_columns=(
+                profile.text_columns
+                if profile is not None
+                else None
+            ),
+            quality_warnings=(
+                list(profile.quality_warnings)
+                if profile is not None
+                else None
+            ),
+            created_at=result.created_at,
+            updated_at=result.updated_at,
+        )
+
+    async def list_datasets(
+        self,
+    ) -> list[DatasetResponseDataDTO]:
         """List dataset metadata and convert it to response data.
 
         Returns:
             Dataset metadata formatted for the API response.
         """
-
         self.logger.log_info(
             "[dataset:list:service] Starting dataset listing"
         )
@@ -57,22 +118,9 @@ class DatasetService:
         datasets = await self.list_workflow.execute()
 
         response_data = [
-            DatasetResponseDataDTO(
-                dataset_id=dataset.dataset_id,
-                name=dataset.name,
-                original_filename=dataset.original_filename,
-                content_type=dataset.content_type,
-                file_size_bytes=dataset.file_size_bytes,
-                status=dataset.status,
-                object_key=dataset.object_key,
-                description=dataset.description,
-                rows_count=dataset.rows_count,
-                columns_count=dataset.columns_count,
-                created_at=dataset.created_at,
-                updated_at=dataset.updated_at,
-            )
+            self._to_response_data(dataset)
             for dataset in datasets
-        ]   
+        ]
 
         self.logger.log_info(
             f"[dataset:list:service] Dataset listing finished: "
@@ -101,22 +149,11 @@ class DatasetService:
             dataset_id=dataset_id,
         )
 
-        response_data = DatasetResponseDataDTO(
-            dataset_id=result.dataset_id,
-            name=result.name,
-            original_filename=result.original_filename,
-            content_type=result.content_type,
-            file_size_bytes=result.file_size_bytes,
-            status=result.status,
-            object_key=result.object_key,
-            description=result.description,
-            rows_count=result.rows_count,
-            columns_count=result.columns_count,
-            created_at=result.created_at,
-            updated_at=result.updated_at,
-        )
+        response_data = self._to_response_data(result)
 
-        self.logger.log_info("[dataset:get:service] Dataset retrieval finished")
+        self.logger.log_info(
+            "[dataset:get:service] Dataset retrieval finished"
+        )
 
         return response_data
 

@@ -27,6 +27,16 @@ class DatasetRepository(Protocol):
         """
         ...
 
+    async def list_metadata(
+        self,
+    ) -> list[DatasetMetadata]:
+        """Retrieve metadata for all active datasets.
+
+        Returns:
+            Dataset metadata ordered from newest to oldest.
+        """
+        ...
+
     async def update_status(
         self,
         dataset_id: UUID,
@@ -62,14 +72,5 @@ class DatasetRepository(Protocol):
         Raises:
             DatasetRelatedRecordsDeletionException:
                 If the related-record cleanup cannot be completed.
-        """
-        ...
-
-
-    async def list_metadata(self) -> list[DatasetMetadata]:
-        """Retrieve metadata for all available datasets.
-
-        Returns:
-            Dataset metadata ordered from newest to oldest.
         """
         ...
