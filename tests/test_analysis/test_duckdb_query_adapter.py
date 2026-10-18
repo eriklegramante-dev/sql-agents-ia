@@ -4,6 +4,7 @@ from io import BytesIO
 
 import pandas as pd
 import pytest
+from app.prepare.exceptions import ValidationException
 
 from app.adapters.analysis.duckdb_query_adapter import (
     DuckDBQueryAdapter,
@@ -144,17 +145,30 @@ class TestDuckDBQueryAdapter:
                 limit=0,
             )
 
-    def test_execute_should_raise_runtime_error_for_invalid_query(
-        self,
+    @pytest.mark.parametrize("sql", ["SELECT * FROM nonexistent_table", "SELECT unknown_column FROM dataset"])
+    def test_execute_should_raise_validation_error_for_invalid_query(
+        self, sql,
     ) -> None:
         parquet_content = self._build_parquet_content()
 
-        with pytest.raises(
-            RuntimeError,
-            match="Unable to execute the analytical query.",
-        ):
+        with pytest.raises(ValidationException) as error:
             self.adapter.execute(
                 parquet_content=parquet_content,
-                sql="SELECT unknown_column FROM dataset",
+                sql=sql,
                 limit=10,
             )
+
+        assert error.value.status_code == 400
+
+    def test_internal_duckdb_error_remains_runtime_error(self, monkeypatch):
+        import duckdb
+        from unittest.mock import Mock
+        connection = Mock()
+        connection.read_parquet.side_effect = duckdb.InternalException("internal failure")
+        monkeypatch.setattr(duckdb, "connect", Mock(return_value=connection))
+        with pytest.raises(RuntimeError, match="Unable to execute the analytical query"):
+            self.adapter.execute(
+                parquet_content=self._build_parquet_content(),
+                sql="SELECT * FROM dataset", limit=10,
+            )
+        connection.close.assert_called_once()

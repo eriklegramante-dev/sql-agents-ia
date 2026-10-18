@@ -9,10 +9,10 @@ class ChatMessageRequestDTO(BaseModel):
     """
     Represents an incoming chat message request.
 
-    Attributes:
-        user_id:
-            Identifier of the user sending the message.
+    User identity is supplied separately by the route security dependency;
+    a user_id field in the request body is rejected as an extra field.
 
+    Attributes:
         message:
             Message submitted by the user.
 
@@ -28,10 +28,6 @@ class ChatMessageRequestDTO(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    user_id: int | str = Field(
-        ...,
-        description="Identifier of the user sending the message.",
-    )
     message: str = Field(
         ...,
         min_length=1,
@@ -49,37 +45,6 @@ class ChatMessageRequestDTO(BaseModel):
         default=None,
         description="Optional contextual metadata associated with the message.",
     )
-
-    @field_validator("user_id")
-    @classmethod
-    def validate_user_id(cls, value: int | str) -> int | str:
-        """
-        Validates and normalizes the user identifier.
-
-        Args:
-            value:
-                User identifier received in the request payload.
-
-        Returns:
-            int | str:
-                Normalized user identifier after validation.
-
-        Raises:
-            ValueError:
-                If the user identifier is empty or otherwise invalid.
-        """
-        if isinstance(value, int):
-            if value <= 0:
-                raise ValueError("User ID must be greater than zero.")
-
-            return value
-
-        normalized_value = value.strip()
-
-        if not normalized_value:
-            raise ValueError("User ID must not be empty.")
-
-        return normalized_value
 
     @field_validator("message")
     @classmethod
@@ -120,10 +85,7 @@ class ChatMessageRequestDTO(BaseModel):
             str | None:
                 Normalized session identifier or None when omitted.
 
-        Raises:
-            ValueError:
-                If the session identifier is provided but is empty after
-                normalization.
+        Blank session identifiers are normalized to None.
         """
         if value is None:
             return None

@@ -6,10 +6,15 @@ from app.routes.uploads.dependencies.dependence import (
     get_upload_controller,
 )
 
+UPLOAD_HEADERS = {
+    "X-Signature": "dummy_secret_token",
+    "X-User-Id": "17",
+}
 
 def test_initialize_upload_route_success(client) -> None:
     response = client.post(
         "/api/v1/uploads/init",
+        headers=UPLOAD_HEADERS,
         json={
             "filename": "customers.csv",
             "content_type": "text/csv",
@@ -30,6 +35,7 @@ def test_initialize_upload_route_success(client) -> None:
 def test_initialize_upload_route_rejects_invalid_extension(client) -> None:
     response = client.post(
         "/api/v1/uploads/init",
+        headers=UPLOAD_HEADERS,
         json={
             "filename": "customers.pdf",
             "content_type": "application/pdf",
@@ -44,6 +50,7 @@ def test_initialize_upload_route_rejects_invalid_extension(client) -> None:
 def test_initialize_upload_route_rejects_invalid_content_type(client) -> None:
     response = client.post(
         "/api/v1/uploads/init",
+        headers=UPLOAD_HEADERS,
         json={
             "filename": "customers.csv",
             "content_type": "application/pdf",
@@ -58,6 +65,7 @@ def test_initialize_upload_route_rejects_invalid_content_type(client) -> None:
 def test_initialize_upload_route_rejects_large_file(client) -> None:
     response = client.post(
         "/api/v1/uploads/init",
+        headers=UPLOAD_HEADERS,
         json={
             "filename": "customers.csv",
             "content_type": "text/csv",
@@ -72,6 +80,7 @@ def test_initialize_upload_route_rejects_large_file(client) -> None:
 def test_initialize_upload_route_validates_request_body(client) -> None:
     response = client.post(
         "/api/v1/uploads/init",
+        headers=UPLOAD_HEADERS,
         json={
             "filename": "",
             "content_type": "text/csv",
@@ -86,16 +95,21 @@ def test_initialize_upload_route_validates_request_body(client) -> None:
 def test_abort_upload_route_success(client) -> None:
     response = client.post(
         "/api/v1/uploads/abort",
+        headers=UPLOAD_HEADERS,
         json={
             "dataset_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
             "upload_id": "upload-1",
         },
     )
 
+    assert response.status_code == 200
+    assert response.json()["data"]["upload_status"] == "ABORTED"
+
 
 def test_abort_upload_route_validates_request_body(client) -> None:
     response = client.post(
         "/api/v1/uploads/abort",
+        headers=UPLOAD_HEADERS,
         json={
             "dataset_id": "",
             "upload_id": "",
@@ -108,6 +122,7 @@ def test_abort_upload_route_validates_request_body(client) -> None:
 def test_abort_upload_route_missing_upload_id(client) -> None:
     response = client.post(
         "/api/v1/uploads/abort",
+        headers=UPLOAD_HEADERS,
         json={
             "dataset_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
         },
@@ -120,7 +135,8 @@ def test_complete_upload_route_success(client) -> None:
 
     class FakeUploadController:
 
-        async def complete_upload(self, request):
+        async def complete_upload(self, request,* , user_id: int):
+            assert user_id == 17
             return JSONResponse(
                 status_code=status.HTTP_200_OK,
                 content={
@@ -141,6 +157,7 @@ def test_complete_upload_route_success(client) -> None:
     try:
         response = client.post(
             "/api/v1/uploads/complete",
+            headers=UPLOAD_HEADERS,
             json={
                 "dataset_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
                 "upload_id": "upload-1",
@@ -162,6 +179,7 @@ def test_complete_upload_route_success(client) -> None:
 def test_complete_upload_route_rejects_empty_parts(client) -> None:
     response = client.post(
         "/api/v1/uploads/complete",
+        headers=UPLOAD_HEADERS,
         json={
             "dataset_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
             "upload_id": "upload-1",
@@ -175,6 +193,7 @@ def test_complete_upload_route_rejects_empty_parts(client) -> None:
 def test_complete_upload_route_rejects_invalid_part_number(client) -> None:
     response = client.post(
         "/api/v1/uploads/complete",
+        headers=UPLOAD_HEADERS,
         json={
             "dataset_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
             "upload_id": "upload-1",
@@ -193,6 +212,7 @@ def test_complete_upload_route_rejects_invalid_part_number(client) -> None:
 def test_complete_upload_route_rejects_blank_etag(client) -> None:
     response = client.post(
         "/api/v1/uploads/complete",
+        headers=UPLOAD_HEADERS,
         json={
             "dataset_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
             "upload_id": "upload-1",

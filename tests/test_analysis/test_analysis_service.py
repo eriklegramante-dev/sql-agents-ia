@@ -11,8 +11,9 @@ class FakeAnalysisWorkflow:
         self.response = response
         self.received_request = None
 
-    async def execute(self, request):
+    async def execute(self, request, *, user_id):
         self.received_request = request
+        self.received_user_id = user_id
         return self.response
 
 
@@ -40,8 +41,9 @@ class AnalysisQueryServiceTest(unittest.IsolatedAsyncioTestCase):
             limit=5,
         )
 
-        response = await service.execute(request)
+        response = await service.execute(request, user_id=37)
 
+        self.assertEqual(workflow.received_user_id, 37)
         self.assertIsInstance(workflow.received_request, AnalysisQueryInput)
         self.assertEqual(workflow.received_request.dataset_id, DATASET_ID)
         self.assertIsNone(workflow.received_request.question)
@@ -59,3 +61,11 @@ class AnalysisQueryServiceTest(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_analysis_service_and_workflow_identity_are_keyword_only():
+    from inspect import Parameter, signature
+    from app.core.analysis.workflow import AnalysisQueryWorkflow
+
+    for layer in (AnalysisQueryService, AnalysisQueryWorkflow):
+        assert signature(layer.execute).parameters["user_id"].kind is Parameter.KEYWORD_ONLY

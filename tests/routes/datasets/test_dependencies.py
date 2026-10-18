@@ -6,6 +6,7 @@ from app.adapters.storage.minio_blob_storage_adapter import (
     MinioBlobStorageAdapter,
 )
 from app.core.datasets.deletion_workflow import DatasetDeletionWorkflow
+from app.core.datasets.list_workflow import DatasetListWorkflow
 from app.core.datasets.workflow import DatasetWorkflow
 from app.routes.datasets.controllers.controller import DatasetController
 from app.routes.datasets.dependencies import dependence
@@ -174,6 +175,9 @@ async def test_get_dataset_controller_builds_retrieval_and_deletion_workflows(
         controller.service.deletion_workflow,
         DatasetDeletionWorkflow,
     )
+
+    assert isinstance(controller.service.list_workflow, DatasetListWorkflow)
+    assert controller.service.list_workflow.repository is fake_repository
 
     assert controller.service.workflow.repository is fake_repository
 

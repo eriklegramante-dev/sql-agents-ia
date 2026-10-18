@@ -50,13 +50,15 @@ class FakeWorkflow:
 class FakeListWorkflow:
     """Fake listing workflow used by dataset service tests."""
 
-    def __init__(self) -> None:
-        self.datasets: list[DatasetMetadata] = []
+    def __init__(self, datasets=None) -> None:
+        self.datasets: list[DatasetMetadata] = datasets if datasets is not None else []
+        self.received_user_id = None
         self.execute_called = False
 
-    async def execute(self) -> list[DatasetMetadata]:
+    async def execute(self, *, user_id: int) -> list[DatasetMetadata]:
         """Return the configured dataset metadata collection."""
         self.execute_called = True
+        self.received_user_id = user_id
         return self.datasets
 
 
@@ -195,9 +197,10 @@ async def test_list_datasets_returns_response_data():
         deletion_workflow=deletion_workflow,
     )
 
-    response = await service.list_datasets()
+    response = await service.list_datasets(user_id=37)
 
     assert list_workflow.execute_called is True
+    assert list_workflow.received_user_id == 37
     assert len(response) == 1
 
     dataset = response[0]
@@ -252,7 +255,7 @@ async def test_list_datasets_preserves_unavailable_profile():
         deletion_workflow=deletion_workflow,
     )
 
-    response = await service.list_datasets()
+    response = await service.list_datasets(user_id=37)
 
     assert len(response) == 1
 
@@ -279,9 +282,10 @@ async def test_list_datasets_returns_empty_list():
         deletion_workflow=deletion_workflow,
     )
 
-    response = await service.list_datasets()
+    response = await service.list_datasets(user_id=37)
 
     assert list_workflow.execute_called is True
+    assert list_workflow.received_user_id == 37
     assert response == []
 
 
@@ -352,3 +356,19 @@ async def test_delete_dataset_propagates_not_found_exception():
         await service.delete_dataset(
             dataset_id=uuid4(),
         )
+
+
+@pytest.mark.parametrize("empty", [False, True])
+async def test_list_datasets_forwards_identity_and_maps_all_metadata(empty):
+    from dataclasses import asdict
+
+    metadata = await FakeWorkflow().execute(dataset_id=uuid4())
+    listing = FakeListWorkflow([] if empty else [metadata])
+    service = DatasetService(
+        workflow=FakeWorkflow(), list_workflow=listing,
+        deletion_workflow=FakeDeletionWorkflow(),
+    )
+    result = await service.list_datasets(user_id=37)
+    assert listing.received_user_id == 37
+    expected = [] if empty else [DatasetResponseDataDTO(**asdict(metadata)).model_dump()]
+    assert [item.model_dump() for item in result] == expected

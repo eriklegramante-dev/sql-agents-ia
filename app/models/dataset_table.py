@@ -19,12 +19,12 @@ class DatasetStatus(enum.Enum):
 
 
 class DatasetTable(Base):
-    """
-    SQLAlchemy model that represents dataset metadata persisted in the database.
+    """SQLAlchemy model representing persisted dataset metadata.
 
-    Stores the dataset lifecycle status, raw and prepared object keys, row and
-    column counters, processing error information, and audit timestamps used by
-    the dataset preparation workflow.
+    Stores lifecycle status, raw and prepared object keys, optional row and
+    column counters, processing errors, and creation and update timestamps.
+    The user_id column stores a nullable integer owner identifier supplied
+    during upload initialization; existing unassigned datasets may have no owner.
     """
 
     __tablename__ = "datasets"
@@ -41,7 +41,7 @@ class DatasetTable(Base):
     raw_object_key = Column(Text, nullable=False)
     prepared_object_key = Column(Text, nullable=True)
 
-    user_id = Column(UUID(as_uuid=True), nullable=True)
+    user_id = Column(Integer, nullable=True)
     description = Column(Text, nullable=True)
     file_type = Column(String(100), nullable=True)
     content_type = Column(String(100), nullable=True)

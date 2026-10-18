@@ -6,13 +6,15 @@ from app.routes.analysis.dtos.dto import (
     AnalysisQueryRequestDTO,
     AnalysisQueryResponseDTO,
 )
-
+from app.security.security import verify_signature, get_trusted_user_id
 from app.routes.analysis.controllers.controller import AnalysisController
 from app.routes.analysis.dependencies import get_analysis_controller
 from app.routes.analysis.dtos.dto import (
     AnalysisChartRequestDTO,
     AnalysisChartResponseDTO,
 )
+
+from app.routes.analysis.query_count import router as query_count_router
 from app.security.security import verify_signature
 
 router = APIRouter(
@@ -20,6 +22,7 @@ router = APIRouter(
     tags=["Analysis"],
 )
 
+router.include_router(query_count_router)
 
 @router.post(
     "/query",
@@ -38,34 +41,25 @@ async def execute_analysis_query(
     controller: AnalysisQueryController = Depends(
         get_analysis_query_controller,
     ),
+    user_id: int = Depends(get_trusted_user_id),
 ) -> AnalysisQueryResponseDTO:
-    """
-    Execute a dataset analysis query.
+    """Delegate analysis using the identity supplied by the trusted caller.
 
-    This route receives a validated analysis request, resolves the analysis
-    controller through dependency injection, delegates the request processing
-    to the application layers, and returns the standardized analytical query
-    response.
-
-    The route contains no dataset lookup, SQL validation, storage access, or
-    query execution logic.
+    The workflow checks dataset ownership, validates and executes SQL,
+    and records the completed query before a success response is returned.
 
     Args:
-        payload:
-            Validated request containing the dataset identifier, optional
-            natural-language question, optional direct SQL query, and row
-            limit.
-
-        controller:
-            Analysis query controller resolved through FastAPI dependency
-            injection.
+        payload: Validated dataset, SQL or question, and response limit.
+        controller: Injected controller coordinating analysis processing.
+        user_id: Positive identity forwarded with a valid internal signature.
 
     Returns:
-        AnalysisQueryResponseDTO:
-            Standardized response containing the executed SQL, returned
-            columns, rows, row counts, and applied limit.
+        Standardized query result after the execution record is persisted.
+
+    Raises:
+        HTTPException: If security validation or controller execution fails.
     """
-    return await controller.execute(payload)
+    return await controller.execute(payload, user_id=user_id)
 
 
 @router.post(

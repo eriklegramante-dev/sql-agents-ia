@@ -52,24 +52,34 @@ class ChatMessageService:
     async def execute(
         self,
         request: ChatMessageRequestDTO,
+        *,
+        user_id: int,
     ) -> ChatMessageResponseDataDTO:
-        """
-        Execute application-level chat message processing.
+        """Map a chat request to workflow input using the trusted caller identity.
+
+        The user identifier is supplied separately from the request body and is
+        used in both the workflow input and response data. Optional workflow
+        artifacts are converted to the API artifact DTO.
 
         Args:
             request:
-                Validated chat request DTO received from the controller.
+                Validated chat request received from the controller.
+            user_id:
+                Trusted identity forwarded by the route security dependency.
 
         Returns:
-            Response data DTO containing the generated answer, detected intent,
-            tool metadata, and optional artifact.
+            ChatMessageResponseDataDTO:
+                Generated answer, intent, tool metadata, optional artifact,
+                and the trusted user identifier.
+
+        Workflow and response mapping failures propagate to the controller.
         """
         self._logger.log_info(
-            f"Executing chat message service for user {request.user_id}."
+            f"Executing chat message service for user {user_id}."
         )
 
         workflow_input = ChatMessageInput(
-            user_id=request.user_id,
+            user_id=user_id,
             message=request.message,
             dataset_id=request.dataset_id,
             session_id=request.session_id,
@@ -87,7 +97,7 @@ class ChatMessageService:
             )
 
         response_data = ChatMessageResponseDataDTO(
-            user_id=result.user_id,
+            user_id=user_id,
             session_id=result.session_id,
             answer=result.answer,
             intent=result.intent.value,
@@ -97,7 +107,7 @@ class ChatMessageService:
         )
 
         self._logger.log_info(
-            f"Chat message service completed for user {request.user_id}."
+            f"Chat message service completed for user {user_id}."
         )
 
         return response_data

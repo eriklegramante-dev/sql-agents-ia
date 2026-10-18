@@ -37,16 +37,23 @@ class PostgresUploadMetadataRepository(UploadMetadataRepository):
         self,
         metadata: dict[str, Any],
     ) -> None:
-        """
-        Persist upload metadata.
+        """Persist initial upload metadata as a dataset owned by the caller.
 
-        Converts the upload metadata generated during upload initialization
-        into a DatasetTable model and delegates persistence to the
-        DatasetRepository.
+        Builds a DatasetTable from the upload payload and delegates insertion
+        to the dataset repository, preserving the supplied integer user_id.
 
         Args:
             metadata:
-                Upload metadata generated during upload initialization.
+                Initial upload metadata containing dataset and upload identifiers,
+                object key, file information, status, and trusted owner identity.
+
+        Raises:
+            KeyError:
+                If a required metadata field is missing.
+            ValueError:
+                If the dataset status cannot be converted to the persistence enum.
+
+        Dataset repository failures propagate to the caller.
         """
 
         dataset = DatasetTable(
@@ -56,7 +63,7 @@ class PostgresUploadMetadataRepository(UploadMetadataRepository):
             status=DatasetStatus(metadata["dataset_status"]),
             raw_object_key=metadata["object_key"],
             prepared_object_key=None,
-            user_id=None,
+            user_id=metadata["user_id"],
             description=metadata.get("description"),
             file_type=None,
             content_type=metadata["content_type"],
@@ -87,7 +94,8 @@ class PostgresUploadMetadataRepository(UploadMetadataRepository):
                 Multipart upload identifier.
 
         Returns:
-            Upload metadata when found, otherwise None.
+            Upload metadata including the persisted owner when found,
+            otherwise None. Ownership is checked by the calling workflow.
         """
         dataset = await self.dataset_repository.find_by_upload(
             dataset_id=dataset_id,
@@ -108,6 +116,7 @@ class PostgresUploadMetadataRepository(UploadMetadataRepository):
             "description": dataset.description,
             "content_type": dataset.content_type,
             "file_size_bytes": dataset.file_size_bytes,
+            "user_id": dataset.user_id,
         }
 
     async def update_status(

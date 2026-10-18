@@ -83,9 +83,15 @@ def test_get_chat_message_workflow_returns_chat_message_workflow():
 def test_get_chat_message_service_returns_chat_message_service():
     pool = create_fake_pool()
 
-    with patch(
-        "app.chat.dependencies.get_settings",
-        return_value=create_fake_settings(),
+    with (
+        patch(
+            "app.chat.dependencies.get_settings",
+            return_value=create_fake_settings(),
+        ),
+        patch(
+            "app.chat.dependencies.create_openai_assistant_executor",
+            return_value=MagicMock(),
+        ),
     ):
         service = get_chat_message_service(pool)
 
@@ -99,9 +105,15 @@ def test_get_chat_message_service_returns_chat_message_service():
 def test_get_chat_message_controller_returns_chat_message_controller():
     pool = create_fake_pool()
 
-    with patch(
-        "app.chat.dependencies.get_settings",
-        return_value=create_fake_settings(),
+    with (
+        patch(
+            "app.chat.dependencies.get_settings",
+            return_value=create_fake_settings(),
+        ),
+        patch(
+            "app.chat.dependencies.create_openai_assistant_executor",
+            return_value=MagicMock(),
+        ),
     ):
         controller = get_chat_message_controller(pool)
 

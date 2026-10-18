@@ -5,6 +5,7 @@ from app.core.analysis.contracts import (
     AnalysisDatasetRepository,
     AnalysisQueryExecutor,
     SQLValidator,
+    QueryExecutionRecorder
 )
 from app.adapters.storage.base import StorageAdapter
 from app.enums.dataset_status import DatasetStatus
@@ -51,6 +52,9 @@ class AnalysisQueryWorkflow:
 
         logger:
             Logger manager used during workflow execution.
+
+        execution_repository:
+            Repository used to record completed queries before returning results.
     """
 
     DEFAULT_LIMIT: int = 20
@@ -64,37 +68,69 @@ class AnalysisQueryWorkflow:
         sql_validator: SQLValidator,
         query_adapter: AnalysisQueryExecutor,
         logger: LoggerManager,
+        execution_repository: QueryExecutionRecorder,
     ) -> None:
+        """Initialize the analytical query workflow dependencies.
+
+        Args:
+            dataset_repository:
+                Repository used to retrieve dataset metadata and ownership.
+            storage_adapter:
+                Adapter used to read the prepared Parquet object.
+            sql_validator:
+                Validator used to normalize and check the supplied SQL.
+            query_adapter:
+                Executor used to query the prepared Parquet content.
+            logger:
+                Logger used to record workflow events and outcomes.
+            execution_repository:
+                Repository used to record a completed query before returning
+                its result to the caller.
+        """
         self.dataset_repository = dataset_repository
         self.storage_adapter = storage_adapter
         self.sql_validator = sql_validator
         self.query_adapter = query_adapter
         self.logger = logger
+        self.execution_repository = execution_repository
 
     async def execute(
         self,
         request: AnalysisQueryInput,
+        *,
+        user_id: int,
     ) -> AnalysisQueryOutput:
-        """
-        Execute a safe analytical query against a prepared dataset.
+        """Execute an analytical query and record it before returning the result.
+
+        Checks ownership before loading storage content or executing SQL. A
+        completed query is recorded even when it returns no rows. Repeated
+        SQL executions are recorded separately. Persistence failures propagate
+        instead of returning a successful result; SQL execution and recording
+        are separate operations.
 
         Args:
             request:
-                Validated analysis query request containing the dataset
-                identifier, optional natural-language question, optional
-                direct SQL query, and requested row limit.
+                Analysis input containing the dataset identifier, optional SQL
+                or question, and requested response limit.
+            user_id:
+                Trusted user identifier supplied by the route dependency and
+                compared with the dataset owner.
 
         Returns:
-            AnalysisQueryResponseDataDTO:
-                Structured analytical result containing the executed SQL,
-                returned columns, rows, row counts, and applied limit.
+            AnalysisQueryOutput:
+                Query result after the success record has been persisted.
 
         Raises:
             AppException:
-                If the dataset does not exist, is not ready for analysis,
-                has no prepared object, no executable SQL is available, or
-                the provided SQL query is unsafe.
+                If the limit or SQL is invalid, the dataset is missing, unowned,
+                not ready, or has no prepared object. Adapter validation errors
+                also propagate with their application status.
+            FileNotFoundError:
+                If the storage adapter cannot find the prepared object.
+            RuntimeError:
+                If the query adapter reports an internal execution failure.
 
+        Storage and repository failures propagate to the caller.
         """
 
         normalized_limit = self._normalize_limit(request.limit)
@@ -111,6 +147,12 @@ class AnalysisQueryWorkflow:
             dataset=dataset,
             dataset_id=request.dataset_id,
         )
+
+        if dataset.user_id is None or dataset.user_id != user_id:
+            raise AppException(
+                message="You do not have access to this dataset.",
+                status_code=403,
+            )
 
         self._validate_dataset_status(dataset.status)
 
@@ -143,6 +185,11 @@ class AnalysisQueryWorkflow:
             limit=normalized_limit,
         )
 
+        await self.execution_repository.record_success(
+            user_id=user_id,
+            dataset_id=request.dataset_id,
+        )
+
         self.logger.log_info(
             f"Analysis query completed successfully for dataset "
             f"{request.dataset_id}."
@@ -159,7 +206,7 @@ class AnalysisQueryWorkflow:
 
         Args:
             limit:
-                Requested maximum number of rows.
+                Requested maximum number of returned rows.
 
         Returns:
             int:

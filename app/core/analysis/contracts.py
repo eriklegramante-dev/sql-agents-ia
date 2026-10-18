@@ -7,6 +7,9 @@ class AnalysisDataset(Protocol):
     Defines the dataset metadata required by the analysis workflow.
 
     Attributes:
+        user_id:
+            Dataset owner identifier, or None for unassigned datasets.
+
         status:
             Current dataset processing status.
 
@@ -14,6 +17,7 @@ class AnalysisDataset(Protocol):
             Storage object key of the prepared Parquet dataset.
     """
 
+    user_id: int | None
     status: str
     prepared_object_key: str | None
 
@@ -115,5 +119,55 @@ class AnalysisQueryExecutor(Protocol):
         Returns:
             AnalysisQueryResult:
                 Structured analytical query result.
+        """
+        ...
+
+
+class QueryExecutionRecorder(Protocol):
+    """Define the persistence contract for completed analytical queries.
+
+    The calling workflow checks ownership and executes the query before
+    requesting a success record. Implementations report persistence failures
+    to the caller rather than suppressing them.
+    """
+
+    async def record_success(
+        self,
+        *,
+        user_id: int,
+        dataset_id: UUID,
+    ) -> None:
+        """Persist a record after an analytical query has completed.
+
+        Args:
+            user_id: Trusted caller identity already checked against the owner.
+            dataset_id: Identifier of the dataset used by the query.
+
+        Returns:
+            None after persistence completes.
+
+        Persistence failures must propagate rather than signal success.
+        """
+        ...
+
+
+class QueryExecutionCounter(Protocol):
+    """Define retrieval of persisted query execution counts by user.
+
+    The caller supplies the trusted user identifier. Implementations scope
+    the count to that identifier and distinguish an empty history from a
+    persistence failure.
+    """
+
+    async def count_by_user(self, *, user_id: int) -> int:
+        """Count persisted successful executions for the supplied user.
+
+        Args:
+            user_id: Trusted user identifier used to scope the count.
+
+        Returns:
+            Number of persisted executions, including zero when none exist.
+
+        Repository failures must propagate rather than return a zero count.
         """
         ...

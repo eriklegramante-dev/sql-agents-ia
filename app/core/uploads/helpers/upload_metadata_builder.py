@@ -25,9 +25,26 @@ class UploadMetadataBuilder:
         object_key: str,
         chunk_size_bytes: int,
         chunks_count: int,
+        *,
+        user_id: int,
     ) -> dict[str, Any]:
-        """
-        Build the initial upload metadata payload.
+        """Build initial upload metadata including the trusted dataset owner.
+
+        Args:
+            dataset_id: Identifier allocated for the new dataset.
+            upload_id: Multipart session identifier returned by storage.
+            filename: Original upload filename.
+            content_type: Validated upload media type.
+            file_size_bytes: Declared upload size in bytes.
+            dataset_name: Normalized dataset display name.
+            description: Optional dataset description.
+            object_key: Storage key allocated for the raw upload.
+            chunk_size_bytes: Planned size of each multipart chunk.
+            chunks_count: Planned number of multipart chunks.
+            user_id: Trusted caller identity to persist as dataset owner.
+
+        Returns:
+            Metadata dictionary with initial statuses and UTC timestamp strings.
         """
         current_time = datetime.now(timezone.utc).isoformat()
 
@@ -46,4 +63,5 @@ class UploadMetadataBuilder:
             "dataset_status": DatasetStatus.UPLOADING.value,
             "created_at": current_time,
             "updated_at": current_time,
+            "user_id": user_id,
         }

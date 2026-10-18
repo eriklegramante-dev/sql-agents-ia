@@ -16,8 +16,9 @@ class FakeChatService:
         self.exception = exception
         self.received_request = None
 
-    async def execute(self, request):
+    async def execute(self, request, *, user_id):
         self.received_request = request
+        self.received_user_id = user_id
 
         if self.exception is not None:
             raise self.exception
@@ -39,7 +40,7 @@ class FakeLogger:
 class ChatMessageControllerTest(unittest.IsolatedAsyncioTestCase):
     async def test_execute_returns_success_payload(self):
         response_data = ChatMessageResponseDataDTO(
-            user_id=1,
+            user_id=37,
             session_id="session-1",
             answer="Hello.",
             intent="general_chat",
@@ -50,18 +51,20 @@ class ChatMessageControllerTest(unittest.IsolatedAsyncioTestCase):
         service = FakeChatService(response_data)
         controller = ChatMessageController(service, logger=FakeLogger())
         request = ChatMessageRequestDTO(
-            user_id=1,
             message="hello",
             session_id="session-1",
         )
 
-        result = await controller.execute(request)
+        result = await controller.execute(request, user_id=37)
 
+        self.assertEqual(service.received_user_id, 37)
         self.assertIs(service.received_request, request)
         self.assertTrue(result.success)
         self.assertEqual(result.message, "Chat message processed successfully.")
         self.assertIs(result.data, response_data)
         self.assertIsNone(result.errors)
+        self.assertEqual(set(result.model_dump()), {"success", "message", "data", "errors"})
+        self.assertIsNone(result.model_extra)
 
     async def test_execute_translates_app_exception_to_http_exception(self):
         service = FakeChatService(
@@ -72,13 +75,14 @@ class ChatMessageControllerTest(unittest.IsolatedAsyncioTestCase):
         )
         controller = ChatMessageController(service, logger=FakeLogger())
         request = ChatMessageRequestDTO(
-            user_id=1,
             message="hello",
         )
 
         with self.assertRaises(HTTPException) as context:
-            await controller.execute(request)
+            await controller.execute(request, user_id=37)
 
+        self.assertEqual(service.received_user_id, 37)
+        self.assertIs(service.received_request, request)
         self.assertEqual(context.exception.status_code, 400)
         self.assertEqual(
             context.exception.detail,
@@ -94,12 +98,11 @@ class ChatMessageControllerTest(unittest.IsolatedAsyncioTestCase):
         service = FakeChatService(exception=RuntimeError("boom"))
         controller = ChatMessageController(service, logger=FakeLogger())
         request = ChatMessageRequestDTO(
-            user_id=1,
             message="hello",
         )
 
         with self.assertRaises(RuntimeError) as context:
-            await controller.execute(request)
+            await controller.execute(request, user_id=37)
 
         self.assertEqual(str(context.exception), "boom")
 

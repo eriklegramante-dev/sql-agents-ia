@@ -20,6 +20,7 @@ class FakeDatasetService:
         self.already_deleted = False
         self.datasets: list[DatasetResponseDataDTO] = []
         self.list_datasets_called = False
+        self.received_user_id = None
 
     async def get_dataset(
         self,
@@ -42,15 +43,20 @@ class FakeDatasetService:
             status=DatasetStatus.COMPLETED.value,
             object_key="datasets/customers.csv",
             description="Dataset used in tests",
+            rows_count=12,
+            columns_count=3,
             created_at=now,
             updated_at=now,
         )
 
     async def list_datasets(
         self,
+        *,
+        user_id: int,
     ) -> list[DatasetResponseDataDTO]:
         """Return configured dataset metadata for listing tests."""
         self.list_datasets_called = True
+        self.received_user_id = user_id
 
         if self.error is not None:
             raise self.error
@@ -78,8 +84,8 @@ class FakeDatasetService:
             status=DatasetStatus.DELETED.value,
             object_key="datasets/customers.csv",
             description="Dataset used in tests",
-            rows_count=None,
-            columns_count=None,
+            rows_count=12,
+            columns_count=3,
             profile=None,
             created_at=now,
             updated_at=now,
@@ -168,7 +174,7 @@ async def test_list_datasets_returns_success_response():
         service=service,
     )
 
-    response = await controller.list_datasets()
+    response = await controller.list_datasets(user_id=37)
 
     assert response.success is True
     assert response.message == "Datasets retrieved successfully."
@@ -182,6 +188,7 @@ async def test_list_datasets_returns_success_response():
         "Dataset warning.",
     ]
     assert service.list_datasets_called is True
+    assert service.received_user_id == 37
 
 
 @pytest.mark.asyncio
@@ -193,12 +200,13 @@ async def test_list_datasets_returns_empty_success_response():
         service=service,
     )
 
-    response = await controller.list_datasets()
+    response = await controller.list_datasets(user_id=37)
 
     assert response.success is True
     assert response.message == "Datasets retrieved successfully."
     assert response.data == []
     assert service.list_datasets_called is True
+    assert service.received_user_id == 37
 
 
 @pytest.mark.asyncio
@@ -212,10 +220,11 @@ async def test_list_datasets_propagates_service_exception():
     )
 
     with pytest.raises(NotFoundException) as exc:
-        await controller.list_datasets()
+        await controller.list_datasets(user_id=37)
 
     assert str(exc.value) == "Dataset listing failed."
     assert service.list_datasets_called is True
+    assert service.received_user_id == 37
 
 
 @pytest.mark.asyncio
@@ -276,3 +285,19 @@ async def test_delete_dataset_propagates_not_found_exception():
         await controller.delete_dataset(
             dataset_id=uuid4(),
         )
+
+
+@pytest.mark.parametrize("empty", [False, True])
+async def test_list_datasets_forwards_identity_and_returns_success(empty):
+    from unittest.mock import AsyncMock
+
+    service = FakeDatasetService()
+    metadata = await service.get_dataset(dataset_id=uuid4())
+    data = [] if empty else [metadata]
+    service.list_datasets = AsyncMock(return_value=data)
+    response = await DatasetController(service=service).list_datasets(user_id=37)
+    service.list_datasets.assert_awaited_once_with(user_id=37)
+    assert response.success is True
+    assert response.message == "Datasets retrieved successfully."
+    assert response.data == data
+    assert response.errors is None

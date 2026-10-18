@@ -1,4 +1,5 @@
 import math
+from app.prepare.exceptions import ValidationException
 from dataclasses import dataclass
 from datetime import date, datetime, time
 from decimal import Decimal
@@ -49,7 +50,8 @@ class DuckDBQueryAdapter:
     representations before returning them to the workflow.
 
     SQL safety validation is intentionally not performed in this class.
-    Queries must be validated before reaching the adapter.
+    Queries must be validated before reaching the adapter. The connection
+    configuration here does not restrict external file access.
 
     The adapter does not persist data and does not modify the source Parquet
     object.
@@ -86,8 +88,12 @@ class DuckDBQueryAdapter:
                 If the Parquet content is empty, SQL is empty, or the row
                 limit is invalid.
 
+            ValidationException:
+                If DuckDB reports a catalog, binding, or parsing error
+                (HTTP 400).
+
             RuntimeError:
-                If DuckDB cannot execute the analytical query.
+                If DuckDB reports another execution error.
         """
         self._validate_inputs(
             parquet_content=parquet_content,
@@ -136,8 +142,10 @@ class DuckDBQueryAdapter:
                 Structured query execution result.
 
         Raises:
+            ValidationException:
+                If DuckDB reports a catalog, binding, or parsing error.
             RuntimeError:
-                If DuckDB cannot execute the query.
+                If DuckDB reports another execution error.
         """
         connection = duckdb.connect(database=":memory:")
 
@@ -175,6 +183,16 @@ class DuckDBQueryAdapter:
                 rows_count=rows_count,
                 returned_rows_count=len(rows),
             )
+
+        except (
+            duckdb.CatalogException,
+            duckdb.BinderException,
+            duckdb.ParserException,
+        ) as error:
+            raise ValidationException(
+                "Invalid analytical SQL. Check table and column names; "
+                "the selected dataset is available as 'dataset'."
+            ) from error
 
         except duckdb.Error as error:
             raise RuntimeError("Unable to execute the analytical query.") from error

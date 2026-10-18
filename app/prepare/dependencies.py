@@ -10,7 +10,7 @@ from app.adapters.storage.minio_blob_storage_adapter import (
 from app.adapters.storage.minio_multipart_client_adapter import (
     MinioMultipartClientAdapter,
 )
-from app.connections.minio import get_minio_client
+from app.connections.minio import get_minio_client, get_minio_signing_client
 from app.core.prepare.workflow import DatasetPreparationWorkflow
 from app.database.dataset_repository import DatasetRepository
 from app.routes.prepare.controllers.controller import (
@@ -70,7 +70,9 @@ async def get_storage_adapter() -> StorageAdapter:
     Build the storage adapter dependency.
 
     Selects the configured storage backend and returns an adapter that
-    implements the StorageAdapter contract.
+    implements the StorageAdapter contract. MinIO uses an internal client
+    for object operations and a separately configured client for signing
+    multipart URLs.
 
     Returns:
         StorageAdapter:
@@ -91,6 +93,7 @@ async def get_storage_adapter() -> StorageAdapter:
             multipart_client=multipart_client,
             bucket_name=settings.minio.bucket_name,
             signed_url_expires_seconds=(settings.upload.signed_url_expires_seconds),
+            signing_client=get_minio_signing_client(settings=settings),
         )
 
     if settings.storage.storage_type == "azure":

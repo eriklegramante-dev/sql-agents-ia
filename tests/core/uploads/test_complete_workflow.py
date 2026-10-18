@@ -4,7 +4,7 @@ from app.adapters.storage.exceptions import StorageOperationError
 from app.core.uploads.complete_workflow import UploadCompletionWorkflow
 from app.core.uploads.enums import DatasetStatus, UploadStatus
 from app.core.uploads.exceptions import UploadCompletionError
-
+from app.core.uploads.exceptions import UploadAccessDeniedError
 
 class FakeUploadMetadataRepository:
     def __init__(self, metadata=None):
@@ -78,6 +78,7 @@ class FailingStorageAdapter:
 
 def build_metadata(
     status=UploadStatus.UPLOADING.value,
+    user_id=17,
 ):
     return {
         "dataset_id": "dataset-1",
@@ -86,6 +87,7 @@ def build_metadata(
         "dataset_status": DatasetStatus.UPLOADING.value,
         "object_key": "datasets/file.csv",
         "chunks_count": 2,
+        "user_id": user_id,
     }
 
 
@@ -114,6 +116,7 @@ async def test_complete_upload_successfully():
                 "etag": "etag-1",
             },
         ],
+        user_id=17,
     )
 
     assert result["status"] == UploadStatus.COMPLETED.value
@@ -149,6 +152,7 @@ async def test_complete_upload_metadata_not_found():
             "dataset-1",
             "upload-1",
             [{"part_number": 1, "etag": "abc"}],
+            user_id=17,
         )
 
 
@@ -172,6 +176,7 @@ async def test_complete_upload_invalid_status():
             "dataset-1",
             "upload-1",
             [{"part_number": 1, "etag": "abc"}],
+            user_id=17,
         )
 
 
@@ -194,6 +199,7 @@ async def test_complete_upload_without_object_key():
             "dataset-1",
             "upload-1",
             [{"part_number": 1, "etag": "abc"}],
+            user_id=17,
         )
 
 
@@ -213,6 +219,7 @@ async def test_complete_upload_empty_parts():
             "dataset-1",
             "upload-1",
             [],
+            user_id=17,
         )
 
 
@@ -241,6 +248,7 @@ async def test_complete_upload_duplicate_parts():
                     "etag": "b",
                 },
             ],
+            user_id=17,
         )
 
 
@@ -269,6 +277,7 @@ async def test_complete_upload_invalid_part_number():
                     "etag": "def",
                 },
             ],
+            user_id=17,
         )
 
 
@@ -297,6 +306,7 @@ async def test_complete_upload_invalid_etag():
                     "etag": "abc",
                 },
             ],
+            user_id=17,
         )
 
 
@@ -321,6 +331,7 @@ async def test_complete_upload_wrong_chunks_count():
                     "etag": "abc",
                 }
             ],
+            user_id=17,
         )
 
 
@@ -349,4 +360,39 @@ async def test_complete_upload_storage_failure():
                     "etag": "def",
                 },
             ],
+            user_id=17,
         )
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("owner_id", [23, None])
+@pytest.mark.parametrize(
+    "status",
+    [UploadStatus.UPLOADING.value, UploadStatus.COMPLETED.value],
+)
+async def test_complete_rejects_unowned_upload_without_side_effects(
+    owner_id,
+    status,
+):
+    repository = FakeUploadMetadataRepository(
+        build_metadata(status=status, user_id=owner_id)
+    )
+    storage = FakeStorageAdapter()
+    workflow = UploadCompletionWorkflow(repository, storage)
+
+    original_metadata = repository.metadata.copy()
+
+    with pytest.raises(UploadAccessDeniedError):
+        await workflow.run(
+            dataset_id="dataset-1",
+            upload_id="upload-1",
+            parts=[
+                {"part_number": 1, "etag": "etag-1"},
+                {"part_number": 2, "etag": "etag-2"},
+            ],
+            user_id=17,
+        )
+
+    assert repository.metadata == original_metadata
+    assert storage.completed_upload is None
+    assert repository.updated_status is None
+    assert repository.completed_parts is None

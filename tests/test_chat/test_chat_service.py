@@ -1,18 +1,22 @@
 import unittest
 
-from app.chat.models import ChatArtifact, ChatIntent, ChatMessageResult
+from app.chat.models import ChatArtifact, ChatIntent, ChatMessageInput, ChatMessageResult
+from app.prepare.exceptions import ValidationException
 from app.routes.chat.dtos.dto import ChatMessageRequestDTO
 from app.routes.chat.services.service import ChatMessageService
 from tests.helpers import DATASET_ID
 
 
 class FakeChatWorkflow:
-    def __init__(self, result):
+    def __init__(self, result=None, exception=None):
         self.result = result
+        self.exception = exception
         self.received_request = None
 
     async def execute(self, request):
         self.received_request = request
+        if self.exception is not None:
+            raise self.exception
         return self.result
 
 
@@ -49,21 +53,21 @@ class ChatMessageServiceTest(unittest.IsolatedAsyncioTestCase):
         )
         service = ChatMessageService(workflow, logger=FakeLogger())
         request = ChatMessageRequestDTO(
-            user_id=1,
             message="chart sales",
             dataset_id=DATASET_ID,
             session_id="session-1",
             metadata={"origin": "test"},
         )
 
-        response = await service.execute(request)
+        response = await service.execute(request, user_id=37)
 
-        self.assertEqual(workflow.received_request.user_id, 1)
+        self.assertIsInstance(workflow.received_request, ChatMessageInput)
+        self.assertEqual(workflow.received_request.user_id, 37)
         self.assertEqual(workflow.received_request.message, "chart sales")
         self.assertEqual(workflow.received_request.dataset_id, DATASET_ID)
         self.assertEqual(workflow.received_request.session_id, "session-1")
         self.assertEqual(workflow.received_request.metadata, {"origin": "test"})
-        self.assertEqual(response.user_id, 1)
+        self.assertEqual(response.user_id, 37)
         self.assertEqual(response.session_id, "session-1")
         self.assertEqual(response.answer, "Here is the chart.")
         self.assertEqual(response.intent, "chart_request")
@@ -99,14 +103,31 @@ class ChatMessageServiceTest(unittest.IsolatedAsyncioTestCase):
         )
         service = ChatMessageService(workflow, logger=FakeLogger())
         request = ChatMessageRequestDTO(
-            user_id="user-1",
             message="hello",
         )
 
-        response = await service.execute(request)
+        response = await service.execute(request, user_id=37)
 
+        self.assertIsInstance(workflow.received_request, ChatMessageInput)
+        self.assertEqual(workflow.received_request.user_id, 37)
+        self.assertIsNone(workflow.received_request.session_id)
+        self.assertEqual(response.user_id, 37)
         self.assertEqual(response.intent, "general_chat")
         self.assertIsNone(response.artifact)
+
+    async def test_execute_propagates_workflow_errors(self):
+        for error in (
+            ValidationException("Invalid chat message.", details=["message is required"]),
+            RuntimeError("boom"),
+        ):
+            with self.subTest(error=type(error).__name__):
+                workflow = FakeChatWorkflow(exception=error)
+                service = ChatMessageService(workflow, logger=FakeLogger())
+                request = ChatMessageRequestDTO(message="hello")
+                with self.assertRaises(type(error)) as context:
+                    await service.execute(request, user_id=37)
+                self.assertIs(context.exception, error)
+                self.assertEqual(workflow.received_request.user_id, 37)
 
 
 if __name__ == "__main__":

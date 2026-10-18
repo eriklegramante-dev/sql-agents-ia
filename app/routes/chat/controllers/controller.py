@@ -18,9 +18,8 @@ class ChatMessageController:
     wraps successful results in the standard response structure, and converts
     predictable application exceptions into HTTP responses.
 
-    Unexpected failures are translated into a generic internal server error
-    response without exposing infrastructure or implementation details to the
-    API client.
+    Unexpected failures propagate to the ASGI error handler. Only application
+    exceptions are translated into a standardized response by this controller.
 
     The controller contains no business rules, intent classification,
     persistence logic, assistant integration, analytical query execution, or
@@ -59,6 +58,8 @@ class ChatMessageController:
     async def execute(
         self,
         request: ChatMessageRequestDTO,
+        *,
+        user_id: int,
     ) -> ChatMessageResponseDTO:
         """
         Execute HTTP-level chat message processing.
@@ -66,20 +67,27 @@ class ChatMessageController:
         Args:
             request:
                 Validated chat message request received from the route.
+            user_id:
+                Trusted caller identity supplied by the route dependency.
 
         Returns:
             Standardized response envelope containing the processed chat
             message result.
+
+        Raises:
+            HTTPException: With the original status for application failures.
+
+        Unexpected exceptions propagate to the ASGI error handler.
         """
         try:
             self._logger.log_info(
-                f"Starting chat message controller for user " f"{request.user_id}."
+                f"Starting chat message controller for user " f"{user_id}."
             )
 
-            response_data = await self._service.execute(request)
+            response_data = await self._service.execute(request, user_id=user_id)
 
             self._logger.log_info(
-                f"Chat message controller completed for user " f"{request.user_id}."
+                f"Chat message controller completed for user " f"{user_id}."
             )
 
             return ChatMessageResponseDTO(

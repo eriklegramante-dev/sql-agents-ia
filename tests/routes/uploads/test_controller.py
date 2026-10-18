@@ -1,8 +1,12 @@
 import pytest
+import json
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock
 
 from fastapi import status
 from fastapi.responses import JSONResponse
 
+from app.core.uploads.exceptions import UploadAccessDeniedError
 from app.core.uploads.exceptions import UploadCompletionError
 from app.routes.uploads.controllers.controller import UploadController
 from app.routes.uploads.dtos.dto import (
@@ -24,6 +28,8 @@ class FakeUploadService:
     async def initialize_upload(
         self,
         request: UploadInitRequestDTO,
+        *,
+        user_id: int,
     ) -> dict:
 
         if self.should_fail:
@@ -49,6 +55,8 @@ class FakeUploadService:
         dataset_id: str,
         upload_id: str,
         parts: list[dict],
+        *,
+        user_id: int,
     ) -> dict:
 
         if self.complete_error:
@@ -58,6 +66,7 @@ class FakeUploadService:
             "dataset_id": dataset_id,
             "upload_id": upload_id,
             "parts": parts,
+            "user_id": user_id,
         }
 
         return {
@@ -101,7 +110,7 @@ async def test_initialize_upload_returns_success_response() -> None:
 
     request = make_request()
 
-    response = await controller.initialize_upload(request)
+    response = await controller.initialize_upload(request, user_id=17)
 
     assert isinstance(
         response,
@@ -118,7 +127,7 @@ async def test_initialize_upload_returns_bad_request_on_value_error() -> None:
 
     request = make_request()
 
-    response = await controller.initialize_upload(request)
+    response = await controller.initialize_upload(request, user_id=17)
 
     assert isinstance(
         response,
@@ -134,6 +143,8 @@ class FakeAbortService:
         self,
         dataset_id: str,
         upload_id: str,
+        *,
+        user_id: int,
     ) -> dict:
 
         return {
@@ -150,6 +161,8 @@ class FakeFailAbortService:
         self,
         dataset_id: str,
         upload_id: str,
+        *,
+        user_id: int,
     ) -> dict:
 
         raise ValueError("Upload cannot be aborted")
@@ -174,7 +187,7 @@ async def test_abort_upload_controller_success() -> None:
 
     request = make_abort_request()
 
-    response = await controller.abort_upload(request)
+    response = await controller.abort_upload(request, user_id=17)
 
     assert isinstance(
         response,
@@ -191,7 +204,7 @@ async def test_abort_upload_controller_failure() -> None:
 
     request = make_abort_request()
 
-    response = await controller.abort_upload(request)
+    response = await controller.abort_upload(request, user_id=17)
 
     assert isinstance(
         response,
@@ -210,7 +223,9 @@ async def test_complete_upload_returns_success_response() -> None:
 
     request = make_complete_request()
 
-    response = await controller.complete_upload(request)
+    response = await controller.complete_upload(request, user_id=17)
+
+    assert service.completed_upload["user_id"] == 17
 
     assert response.status_code == status.HTTP_200_OK
 
@@ -241,7 +256,7 @@ async def test_complete_upload_returns_bad_request_when_service_raises_value_err
 
     request = make_complete_request()
 
-    response = await controller.complete_upload(request)
+    response = await controller.complete_upload(request, user_id=17)
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
 
@@ -261,7 +276,7 @@ async def test_complete_upload_returns_bad_gateway_when_service_raises_completio
 
     request = make_complete_request()
 
-    response = await controller.complete_upload(request)
+    response = await controller.complete_upload(request, user_id=17)
 
     assert isinstance(
         response,
@@ -269,3 +284,37 @@ async def test_complete_upload_returns_bad_gateway_when_service_raises_completio
     )
 
     assert response.status_code == status.HTTP_502_BAD_GATEWAY
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("operation", "request_factory"),
+    [
+        ("complete_upload", make_complete_request),
+        ("abort_upload", make_abort_request),
+    ],
+)
+async def test_upload_returns_forbidden_when_access_is_denied(
+    operation,
+    request_factory,
+):
+    service_method = AsyncMock(
+        side_effect=UploadAccessDeniedError(
+            "You do not have access to this upload."
+        )
+    )
+    service = SimpleNamespace(**{operation: service_method})
+    controller = UploadController(service=service)
+
+    response = await getattr(controller, operation)(
+        request_factory(),
+        user_id=17,
+    )
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert json.loads(response.body) == {
+        "success": False,
+        "message": "You do not have access to this upload.",
+        "data": None,
+    }
+    service_method.assert_awaited_once()
+    assert service_method.await_args.kwargs["user_id"] == 17

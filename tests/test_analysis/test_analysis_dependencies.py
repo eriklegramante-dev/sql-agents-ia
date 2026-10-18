@@ -1,4 +1,6 @@
 import asyncio
+from unittest.mock import AsyncMock
+from app.database.query_execution_repository import QueryExecutionRepository
 
 from app.adapters.analysis.duckdb_query_adapter import DuckDBQueryAdapter
 from app.analysis import dependencies
@@ -11,6 +13,9 @@ from app.routes.analysis.services.service import AnalysisQueryService
 def test_get_analysis_query_workflow_returns_analysis_query_workflow(monkeypatch):
     repository = object()
     storage_adapter = object()
+    pool = object()
+    get_pool = AsyncMock(return_value=pool)
+    monkeypatch.setattr(dependencies, "get_db_pool", get_pool)
 
     async def fake_get_dataset_repository():
         return repository
@@ -32,6 +37,9 @@ def test_get_analysis_query_workflow_returns_analysis_query_workflow(monkeypatch
     workflow = asyncio.run(dependencies.get_analysis_query_workflow())
 
     assert isinstance(workflow, AnalysisQueryWorkflow)
+    get_pool.assert_awaited_once_with()
+    assert isinstance(workflow.execution_repository, QueryExecutionRepository)
+    assert workflow.execution_repository.pool is pool
     assert workflow.dataset_repository is repository
     assert workflow.storage_adapter is storage_adapter
     assert isinstance(workflow.sql_validator, SQLSafetyValidator)

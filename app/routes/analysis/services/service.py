@@ -31,7 +31,7 @@ from app.core.analysis.models import AnalysisQueryInput
 class AnalysisQueryService:
     """
     Coordinates dataset analysis query execution at the service layer.
-    (Implementação vinda da branch dev)
+    Maps HTTP DTOs to core input and forwards the trusted caller identity.
     """
 
     def __init__(
@@ -44,8 +44,22 @@ class AnalysisQueryService:
 
     async def execute(
         self,
-        request: AnalysisQueryInput,
+        request: AnalysisQueryRequestDTO,
+        *,
+        user_id: int,
     ) -> AnalysisQueryResponseDataDTO:
+        """Map the analysis request to core input and return response data.
+
+        Args:
+            request: Validated query request received from the controller.
+            user_id: Trusted route identity forwarded for dataset ownership checks.
+
+        Returns:
+            Response data after query execution and success recording complete.
+
+        Workflow validation, storage, execution, and persistence failures
+        propagate to the controller without building a successful response.
+        """
         self.logger.log_info(
             f"Executing analysis query service for dataset " f"{request.dataset_id}."
         )
@@ -57,7 +71,7 @@ class AnalysisQueryService:
             limit=request.limit,
         )
 
-        result = await self.workflow.execute(workflow_request)
+        result = await self.workflow.execute(workflow_request, user_id=user_id)
 
         response_data = AnalysisQueryResponseDataDTO(
             dataset_id=result.dataset_id,

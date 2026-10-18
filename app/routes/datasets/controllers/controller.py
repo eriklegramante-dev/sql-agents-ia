@@ -41,18 +41,27 @@ class DatasetController:
         self.logger = logger or LOGGER
 
 
-    async def list_datasets(self) -> DatasetListResponseDTO:
-        """Handle a dataset listing request.
+    async def list_datasets(
+        self,
+        *,
+        user_id: int,
+        ) -> DatasetListResponseDTO:
+        """Build the response for the trusted user's dataset listing.
+
+        Args:
+            user_id: Trusted caller identity used to scope the repository lookup.
 
         Returns:
-            Standardized response containing all available dataset metadata.
+            Standardized response containing the user's available metadata.
+
+        Repository failures propagate to the caller.
         """
 
         self.logger.log_info(
             "[dataset:list:controller] Received dataset listing request"
         )
 
-        response_data = await self.service.list_datasets()
+        response_data = await self.service.list_datasets(user_id=user_id)
 
         response = DatasetListResponseDTO(
             success=True,

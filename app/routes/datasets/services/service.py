@@ -105,17 +105,24 @@ class DatasetService:
 
     async def list_datasets(
         self,
+        *,
+        user_id: int,
     ) -> list[DatasetResponseDataDTO]:
-        """List dataset metadata and convert it to response data.
+        """Map the trusted user's dataset listing to response data.
+
+        Args:
+            user_id: Trusted caller identity used to scope the repository lookup.
 
         Returns:
             Dataset metadata formatted for the API response.
+
+        Repository failures propagate to the caller.
         """
         self.logger.log_info(
             "[dataset:list:service] Starting dataset listing"
         )
 
-        datasets = await self.list_workflow.execute()
+        datasets = await self.list_workflow.execute(user_id=user_id)
 
         response_data = [
             self._to_response_data(dataset)

@@ -17,8 +17,9 @@ class FakeAnalysisService:
         self.exception = exception
         self.received_request = None
 
-    async def execute(self, request):
+    async def execute(self, request, *, user_id):
         self.received_request = request
+        self.received_user_id = user_id
 
         if self.exception is not None:
             raise self.exception
@@ -59,8 +60,9 @@ class AnalysisQueryControllerTest(unittest.IsolatedAsyncioTestCase):
             sql="select name from dataset",
         )
 
-        result = await controller.execute(request)
+        result = await controller.execute(request, user_id=37)
 
+        self.assertEqual(service.received_user_id, 37)
         self.assertIs(service.received_request, request)
         self.assertTrue(result.success)
         self.assertEqual(result.message, "Analysis query executed successfully.")
@@ -82,7 +84,7 @@ class AnalysisQueryControllerTest(unittest.IsolatedAsyncioTestCase):
         )
 
         with self.assertRaises(HTTPException) as context:
-            await controller.execute(request)
+            await controller.execute(request, user_id=37)
 
         self.assertEqual(context.exception.status_code, 422)
         self.assertEqual(
@@ -104,7 +106,7 @@ class AnalysisQueryControllerTest(unittest.IsolatedAsyncioTestCase):
         )
 
         with self.assertRaises(HTTPException) as context:
-            await controller.execute(request)
+            await controller.execute(request, user_id=37)
 
         self.assertEqual(context.exception.status_code, 500)
         self.assertEqual(
@@ -120,3 +122,9 @@ class AnalysisQueryControllerTest(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_analysis_controller_identity_is_keyword_only():
+    from inspect import Parameter, signature
+
+    assert signature(AnalysisQueryController.execute).parameters["user_id"].kind is Parameter.KEYWORD_ONLY

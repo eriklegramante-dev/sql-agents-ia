@@ -257,7 +257,6 @@ class DatasetRepository(BaseRepository[DatasetTable]):
 
         return self._build_dataset(row)
 
-
     async def get_metadata_by_id(
         self,
         dataset_id: UUID,
@@ -312,11 +311,18 @@ class DatasetRepository(BaseRepository[DatasetTable]):
 
     async def list_metadata(
         self,
+        *,
+        user_id: int,
     ) -> list[DatasetMetadata]:
-        """Retrieve metadata for all active datasets.
+        """Retrieve non-deleted metadata with a parameterized owner filter.
+
+        Args:
+            user_id: Trusted caller identity used to scope the repository lookup.
 
         Returns:
-            Dataset metadata ordered from newest to oldest.
+            Dataset metadata with optional profiling, newest first.
+
+        Repository failures propagate to the caller.
         """
         async with self.pool.acquire() as connection:
             rows = await connection.fetch(
@@ -339,9 +345,11 @@ class DatasetRepository(BaseRepository[DatasetTable]):
                 LEFT JOIN dataset_profiles AS dp
                     ON dp.dataset_id = d.id
                 WHERE d.status <> $1
+                  AND d.user_id = $2
                 ORDER BY d.created_at DESC
                 """,
                 DatasetStatus.DELETED.value,
+                user_id,
             )
 
         return [

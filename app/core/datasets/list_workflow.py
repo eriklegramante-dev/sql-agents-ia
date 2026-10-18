@@ -26,18 +26,27 @@ class DatasetListWorkflow:
         self.repository = dataset_repository
         self.logger = logger or LOGGER
 
-    async def execute(self) -> list[DatasetMetadata]:
-        """Retrieve all available dataset metadata.
+    async def execute(
+        self,
+        *,
+        user_id: int,
+    ) -> list[DatasetMetadata]:
+        """Retrieve non-deleted metadata for the trusted user.
+
+        Args:
+            user_id: Trusted caller identity used to scope the repository lookup.
 
         Returns:
             Dataset metadata ordered from newest to oldest.
+
+        Repository failures propagate to the caller.
         """
 
         self.logger.log_info(
             "[dataset:list:workflow] Starting dataset listing"
         )
 
-        datasets = await self.repository.list_metadata()
+        datasets = await self.repository.list_metadata(user_id=user_id)
 
         self.logger.log_info(
             f"[dataset:list:workflow] Dataset listing completed: "

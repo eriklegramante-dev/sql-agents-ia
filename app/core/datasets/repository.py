@@ -29,11 +29,18 @@ class DatasetRepository(Protocol):
 
     async def list_metadata(
         self,
+        *,
+        user_id: int,
     ) -> list[DatasetMetadata]:
-        """Retrieve metadata for all active datasets.
+        """Retrieve non-deleted metadata owned by the supplied user.
+
+        Args:
+            user_id: Trusted caller identity used to scope the repository lookup.
 
         Returns:
             Dataset metadata ordered from newest to oldest.
+
+        Repository failures propagate to the caller.
         """
         ...
 
