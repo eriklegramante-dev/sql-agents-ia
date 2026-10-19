@@ -41,18 +41,27 @@ class DatasetController:
         self.logger = logger or LOGGER
 
 
-    async def list_datasets(self) -> DatasetListResponseDTO:
-        """Handle a dataset listing request.
+    async def list_datasets(
+        self,
+        *,
+        user_id: int,
+        ) -> DatasetListResponseDTO:
+        """Build the response for the trusted user's dataset listing.
+
+        Args:
+            user_id: Trusted caller identity used to scope the repository lookup.
 
         Returns:
-            Standardized response containing all available dataset metadata.
+            Standardized response containing the user's available metadata.
+
+        Repository failures propagate to the caller.
         """
 
         self.logger.log_info(
             "[dataset:list:controller] Received dataset listing request"
         )
 
-        response_data = await self.service.list_datasets()
+        response_data = await self.service.list_datasets(user_id=user_id)
 
         response = DatasetListResponseDTO(
             success=True,
@@ -69,10 +78,13 @@ class DatasetController:
     async def get_dataset(
         self,
         dataset_id: UUID,
+        *,
+        user_id: int,
     ) -> DatasetResponseDTO:
         """Handle a dataset metadata retrieval request.
 
         Args:
+            user_id: Trusted caller identity used to authorize dataset ownership.
             dataset_id: Unique identifier of the dataset to retrieve.
 
         Returns:
@@ -84,6 +96,7 @@ class DatasetController:
 
         response_data = await self.service.get_dataset(
             dataset_id=dataset_id,
+            user_id=user_id,
         )
 
         response = DatasetResponseDTO(
@@ -101,6 +114,8 @@ class DatasetController:
     async def delete_dataset(
         self,
         dataset_id: UUID,
+        *,
+        user_id: int,
     ) -> DatasetDeleteResponseDTO:
         """Handle a dataset deletion request.
 
@@ -108,6 +123,7 @@ class DatasetController:
         the response with the dataset final deletion state.
 
         Args:
+            user_id: Trusted caller identity used to authorize dataset ownership.
             dataset_id: Unique identifier of the dataset to delete.
 
         Returns:
@@ -120,6 +136,7 @@ class DatasetController:
 
         result = await self.service.delete_dataset(
             dataset_id=dataset_id,
+            user_id=user_id,
         )
 
         message = (

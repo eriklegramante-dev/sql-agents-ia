@@ -4,6 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Path, status
 
 from app.prepare.exceptions import AppException
+from app.security.security import get_trusted_user_id
 from app.routes.datasets.controllers.controller import DatasetController
 from app.routes.datasets.dependencies.dependence import get_dataset_controller
 from app.routes.datasets.dtos.dto import (
@@ -23,18 +24,20 @@ router = APIRouter(
     status_code=status.HTTP_200_OK,
 )
 async def list_datasets(
+    user_id: Annotated[int, Depends(get_trusted_user_id)],
     controller: Annotated[
         DatasetController,
         Depends(get_dataset_controller),
     ],
 ) -> DatasetListResponseDTO:
-    """List available dataset metadata.
+    """List non-deleted dataset metadata owned by the trusted user.
 
     Args:
+        user_id: Positive identity forwarded with a valid internal signature.
         controller: Injected controller responsible for dataset operations.
 
     Returns:
-        Standardized response containing all available dataset metadata.
+        Standardized response containing metadata owned by the trusted user.
 
     Raises:
         HTTPException:
@@ -42,7 +45,9 @@ async def list_datasets(
     """
 
     try:
-        return await controller.list_datasets()
+        return await controller.list_datasets(
+            user_id=user_id,
+        )
 
     except AppException as error:
         raise HTTPException(
@@ -72,10 +77,12 @@ async def get_dataset(
         DatasetController,
         Depends(get_dataset_controller),
     ],
+    user_id: int = Depends(get_trusted_user_id),
 ) -> DatasetResponseDTO:
     """Retrieve dataset metadata by its unique identifier.
 
     Args:
+        user_id: Trusted caller identity used to authorize dataset ownership.
         dataset_id: Unique identifier of the dataset to retrieve.
         controller: Injected controller responsible for dataset operations.
 
@@ -89,6 +96,7 @@ async def get_dataset(
     try:
         return await controller.get_dataset(
             dataset_id=dataset_id,
+            user_id=user_id,
         )
 
     except AppException as error:
@@ -119,10 +127,12 @@ async def delete_dataset(
         DatasetController,
         Depends(get_dataset_controller),
     ],
+    user_id: int = Depends(get_trusted_user_id),
 ) -> DatasetDeleteResponseDTO:
     """Delete a dataset by its unique identifier.
 
     Args:
+        user_id: Trusted caller identity used to authorize dataset ownership.
         dataset_id: Unique identifier of the dataset to delete.
         controller: Injected controller responsible for dataset operations.
 
@@ -136,6 +146,7 @@ async def delete_dataset(
     try:
         return await controller.delete_dataset(
             dataset_id=dataset_id,
+            user_id=user_id,
         )
 
     except AppException as error:

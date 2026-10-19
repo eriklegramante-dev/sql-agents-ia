@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, status
 
 from app.routes.uploads.controllers.controller import UploadController
 from app.routes.uploads.dependencies.dependence import get_upload_controller
+from app.security.security import get_trusted_user_id
 from app.routes.uploads.dtos.dto import (
     UploadAbortRequestDTO,
     UploadAbortResponseDTO,
@@ -21,6 +22,7 @@ router = APIRouter(prefix="/uploads", tags=["Uploads"])
 )
 async def initialize_upload(
     request: UploadInitRequestDTO,
+    user_id: int = Depends(get_trusted_user_id),
     controller: UploadController = Depends(get_upload_controller),
 ):
     """Create a new multipart upload session for a dataset.
@@ -28,13 +30,15 @@ async def initialize_upload(
     Args:
         request:
             Validated upload initialization request.
+        user_id:
+            Trusted user identity forwarded by the route security dependency.
         controller:
             Controller responsible for the upload flow.
 
     Returns:
         JSON response containing the upload metadata and signed URLs.
     """
-    return await controller.initialize_upload(request)
+    return await controller.initialize_upload(request=request, user_id=user_id)
 
 
 @router.post(
@@ -44,21 +48,23 @@ async def initialize_upload(
 )
 async def complete_upload(
     request: UploadCompleteRequestDTO,
+    user_id: int = Depends(get_trusted_user_id),
     controller: UploadController = Depends(get_upload_controller),
 ) -> UploadCompleteResponseDTO:
-    """Finalize a multipart dataset upload.
+    """Delegate multipart upload completion using the trusted user identity.
 
-    This endpoint validates the uploaded parts, completes the multipart
-    upload in object storage and updates the persisted dataset metadata.
+    The controller forwards the request to the completion workflow, which
+    checks ownership, validates parts, completes storage, and updates metadata.
 
     Args:
         request: Validated upload completion payload.
-        controller: Configured upload controller.
+        user_id: Trusted identity supplied by the route security dependency.
+        controller: Injected controller responsible for the completion flow.
 
     Returns:
-        Standardized response containing the finalized upload metadata.
+        JSON response containing completion metadata or a handled upload error.
     """
-    return await controller.complete_upload(request)
+    return await controller.complete_upload(request=request, user_id=user_id)
 
 
 @router.post(
@@ -68,20 +74,20 @@ async def complete_upload(
 )
 async def abort_upload(
     request: UploadAbortRequestDTO,
+    user_id: int = Depends(get_trusted_user_id),
     controller: UploadController = Depends(get_upload_controller),
 ) -> UploadAbortResponseDTO:
-    """Abort an active multipart upload.
+    """Delegate multipart upload cancellation using the trusted user identity.
 
-    This endpoint cancels an unfinished multipart upload, removes any
-    temporary objects created during the upload process and updates the
-    dataset status accordingly.
+    The workflow checks ownership before processing the upload status and
+    performing any required storage abort and temporary-part cleanup.
 
     Args:
         request: Validated upload abort payload.
-        controller: Configured upload controller.
+        user_id: Trusted identity supplied by the route security dependency.
+        controller: Injected controller responsible for the abort flow.
 
     Returns:
-        Standardized response containing the final upload and dataset
-        statuses.
+        JSON response containing final upload statuses or a handled upload error.
     """
-    return await controller.abort_upload(request)
+    return await controller.abort_upload(request=request, user_id=user_id)

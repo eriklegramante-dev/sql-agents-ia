@@ -43,11 +43,12 @@ class DatasetProfileController:
         self.service = service or DatasetProfileService()
         self.logger = (logger or LOGGER).logger
 
-    async def profile_dataset(self, dataset_id: UUID) -> DatasetProfileResponseDTO:
+    async def profile_dataset(self, dataset_id: UUID, *, user_id: int) -> DatasetProfileResponseDTO:
         """
         Process a dataset profiling request.
 
         Args:
+            user_id: Trusted caller identity used to authorize dataset ownership.
             dataset_id:
                 Unique identifier of the dataset to profile.
 
@@ -59,4 +60,4 @@ class DatasetProfileController:
 
         request = DatasetProfileRequestDTO(dataset_id=dataset_id)
 
-        return await self.service.profile_dataset(request.dataset_id)
+        return await self.service.profile_dataset(request.dataset_id, user_id=user_id)

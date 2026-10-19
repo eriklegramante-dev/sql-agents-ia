@@ -56,10 +56,25 @@ class UploadSettings(BaseSettings):
 
 
 class MinioSettings(BaseSettings):
+    """Configure storage access and browser-facing URL signing.
+
+    Attributes:
+        endpoint: SDK endpoint used for storage operations.
+        access_key: Access identifier supplied to the MinIO clients.
+        secret_key: Secret supplied to the MinIO clients.
+        bucket_name: Bucket used for dataset objects.
+        public_endpoint: Optional signing endpoint reachable by upload clients.
+        region: Region supplied to the URL signing client.
+        secure: Shared TLS flag used by storage and signing clients.
+
+    Endpoint reachability, proxy routing, and CORS are not checked here.
+    """
     endpoint: str
     access_key: str
     secret_key: str
     bucket_name: str
+    public_endpoint: str | None = None
+    region: str = "us-east-1"
     secure: bool = False
 
     model_config = {

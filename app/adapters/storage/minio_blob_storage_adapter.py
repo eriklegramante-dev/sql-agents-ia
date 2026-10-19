@@ -24,6 +24,7 @@ class MinioBlobStorageAdapter(
 
     Attributes:
         client: MinIO client used for object operations.
+        signing_client: Client used to sign multipart URLs for the caller.
         multipart_client: Adapter used for multipart upload operations.
         bucket_name: Bucket where dataset objects are stored.
         signed_url_expires_seconds: Expiration time for signed part URLs.
@@ -35,16 +36,22 @@ class MinioBlobStorageAdapter(
         multipart_client: MultipartClientAdapter,
         bucket_name: str,
         signed_url_expires_seconds: int,
+        signing_client: Minio | None = None,
     ) -> None:
-        """Initialize the adapter with MinIO storage dependencies.
+        """Initialize storage clients and ensure the configured bucket exists.
 
         Args:
             client: MinIO client used to access stored objects.
             multipart_client: Client adapter used for multipart operations.
             bucket_name: Bucket used to store dataset files.
             signed_url_expires_seconds: Lifetime of generated signed URLs.
+            signing_client: Optional client used to sign part URLs. The object
+                storage client is used when this dependency is omitted.
+
+        Bucket lookup and creation failures propagate to the caller.
         """
         self.client = client
+        self.signing_client = signing_client if signing_client is not None else client
         self.multipart_client = multipart_client
         self.bucket_name = bucket_name
         self.signed_url_expires_seconds = signed_url_expires_seconds
@@ -220,7 +227,10 @@ class MinioBlobStorageAdapter(
         upload_id: str,
         part_number: int,
     ) -> str:
-        """Generate a signed URL for uploading one multipart part.
+        """Generate a signed PUT URL for one multipart upload part.
+
+        Uses the injected signing client and configured expiration. Multipart
+        initialization and object access continue to use the storage clients.
 
         Args:
             object_key: Object key associated with the multipart upload.
@@ -228,9 +238,11 @@ class MinioBlobStorageAdapter(
             part_number: Number of the part to upload.
 
         Returns:
-            Signed MinIO URL for uploading the requested part.
+            Signed MinIO URL containing the upload ID and part number.
+
+        Signing client failures propagate to the caller.
         """
-        return self.client.get_presigned_url(
+        return self.signing_client.get_presigned_url(
             method="PUT",
             bucket_name=self.bucket_name,
             object_name=object_key,

@@ -48,9 +48,21 @@ class AnalysisQueryController:
     async def execute(
         self,
         request: AnalysisQueryRequestDTO,
+        *,
+        user_id: int,
     ) -> AnalysisQueryResponseDTO:
-        """
-        Execute HTTP-level dataset analysis query processing.
+        """Delegate query processing and translate failures to HTTP errors.
+
+        Args:
+            request: Validated query request received from the route.
+            user_id: Trusted route identity forwarded to the service.
+
+        Returns:
+            Standardized success response after the workflow records execution.
+
+        Raises:
+            HTTPException: With the application status for predictable failures,
+                or HTTP 500 for unexpected execution or persistence failures.
         """
         try:
             self.logger.log_info(
@@ -58,7 +70,7 @@ class AnalysisQueryController:
                 f"{request.dataset_id}."
             )
 
-            response_data = await self.service.execute(request)
+            response_data = await self.service.execute(request, user_id=user_id)
 
             self.logger.log_info(
                 f"Analysis query controller completed for dataset "

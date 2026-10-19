@@ -1,5 +1,7 @@
 import pytest
 
+from unittest.mock import patch
+
 from app.adapters.storage.fake_blob_storage_adapter import FakeBlobStorageAdapter
 from app.core.uploads.workflow import UploadInitializationWorkflow
 from app.repositories.upload_metadata_repository import UploadMetadataRepository
@@ -73,7 +75,7 @@ def make_request(
 async def test_run_initializes_upload_successfully():
     workflow, repository = make_workflow()
 
-    result = await workflow.run(make_request())
+    result = await workflow.run(make_request(), user_id=17)
 
     assert result["status"] == "UPLOADING"
     assert result["chunk_size_bytes"] == 5_000_000
@@ -87,6 +89,8 @@ async def test_run_initializes_upload_successfully():
     assert repository.created_metadata["dataset_name"] == "Customers Dataset"
     assert repository.created_metadata["upload_status"] == "UPLOADING"
     assert repository.created_metadata["dataset_status"] == "UPLOADING"
+    assert repository.created_metadata["user_id"] == 17
+    assert type(repository.created_metadata["user_id"]) is int
 
 
 @pytest.mark.asyncio
@@ -108,7 +112,9 @@ async def test_run_rejects_invalid_file_extension(
             make_request(
                 filename=filename,
                 content_type=content_type,
-            )
+
+            ),
+            user_id=17,
         )
 
 
@@ -121,7 +127,8 @@ async def test_run_rejects_invalid_content_type():
             make_request(
                 filename="customers.csv",
                 content_type="application/pdf",
-            )
+            ),
+            user_id=17,
         )
 
 
@@ -130,7 +137,10 @@ async def test_run_rejects_file_larger_than_configured_limit():
     workflow, _ = make_workflow()
 
     with pytest.raises(ValueError, match="File size exceeds"):
-        await workflow.run(make_request(file_size_bytes=20_000_000))
+        await workflow.run(
+            make_request(file_size_bytes=20_000_000),
+            user_id=17,
+        )
 
 
 @pytest.mark.asyncio
@@ -141,10 +151,29 @@ async def test_run_accepts_xlsx_file():
         make_request(
             filename="customers.xlsx",
             content_type=(
-                "application/vnd.openxmlformats-officedocument." "spreadsheetml.sheet"
+                "application/vnd.openxmlformats-officedocument."
+                "spreadsheetml.sheet"
             ),
-        )
+        ),
+        user_id=17,
     )
 
     assert result["status"] == "UPLOADING"
     assert result["object_key"].endswith("/raw/customers.xlsx")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("user_id", [0, -1, None, True, "17"])
+async def test_run_rejects_invalid_owner_before_storage(user_id):
+    workflow, repository = make_workflow()
+
+    with patch.object(
+        workflow.storage_adapter,
+        "initialize_multipart_upload",
+    ) as initialize:
+        with pytest.raises(ValueError, match="positive integer"):
+            await workflow.run(make_request(), user_id=user_id)
+
+        initialize.assert_not_called()
+
+    assert repository.created_metadata is None

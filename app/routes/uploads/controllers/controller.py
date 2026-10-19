@@ -3,7 +3,7 @@ from typing import Optional
 from fastapi import status
 from fastapi.responses import JSONResponse
 
-from app.core.uploads.exceptions import UploadCompletionError
+from app.core.uploads.exceptions import UploadCompletionError, UploadAccessDeniedError
 from app.logs.setup_logger import LOGGER, LoggerManager
 from app.routes.uploads.dtos.dto import (
     UploadAbortRequestDTO,
@@ -44,20 +44,26 @@ class UploadController:
     async def initialize_upload(
         self,
         request: UploadInitRequestDTO,
+        *,
+        user_id: int,
     ) -> JSONResponse:
-        """Handle the upload initialization request.
+        """Handle upload initialization for the trusted user.
 
         Args:
-            request: Validated upload initialization request.
+            request: Validated request received from the route.
+            user_id: Trusted caller identity forwarded to the service.
 
         Returns:
-            JSONResponse containing the upload initialization metadata.
+            HTTP 201 with upload metadata and signed part URLs, or HTTP 400
+            when request processing raises ValueError.
+
+        Exceptions outside the handled failure types propagate to the caller.
         """
         try:
             self.logger.log_info(
                 "[upload:init:controller] Received upload initialization request"
             )
-            result = await self.service.initialize_upload(request)
+            result = await self.service.initialize_upload(request=request, user_id=user_id)
             response = UploadInitResponseDTO(
                 success=True,
                 message="Upload initialized successfully.",
@@ -88,14 +94,21 @@ class UploadController:
     async def complete_upload(
         self,
         request: UploadCompleteRequestDTO,
+        *,
+        user_id: int,
     ) -> JSONResponse:
-        """Handle the upload completion request.
+        """Handle completion of an upload for the trusted user.
 
         Args:
-            request: Validated upload completion request.
+            request: Validated request received from the route.
+            user_id: Trusted caller identity forwarded to the service.
 
         Returns:
-            JSONResponse containing the finalized multipart upload metadata.
+            HTTP 200 with completed upload metadata, HTTP 403 for denied
+            ownership, HTTP 400 for invalid upload data, or HTTP 502 for a
+            storage completion failure.
+
+        Exceptions outside the handled failure types propagate to the caller.
         """
         try:
             self.logger.log_info(
@@ -106,6 +119,7 @@ class UploadController:
                 dataset_id=(request.dataset_id),
                 upload_id=request.upload_id,
                 parts=[part.model_dump() for part in request.parts],
+                user_id=user_id,
             )
             response = UploadCompleteResponseDTO(
                 success=True,
@@ -120,6 +134,15 @@ class UploadController:
             return JSONResponse(
                 status_code=status.HTTP_200_OK,
                 content=response.model_dump(mode="json"),
+            )
+        except UploadAccessDeniedError:
+            return JSONResponse(
+                status_code=status.HTTP_403_FORBIDDEN,
+                content={
+                    "success": False,
+                    "message": "You do not have access to this upload.",
+                    "data": None,
+                },
             )
         except ValueError as exc:
             self.logger.log_warning(
@@ -151,14 +174,21 @@ class UploadController:
     async def abort_upload(
         self,
         request: UploadAbortRequestDTO,
+        *,
+        user_id: int,
     ) -> JSONResponse:
-        """Handle the upload abort request.
+        """Handle cancellation of an upload for the trusted user.
 
         Args:
-            request: Validated upload abort request.
+            request: Validated request received from the route.
+            user_id: Trusted caller identity forwarded to the service.
 
         Returns:
-            JSONResponse containing the final upload statuses.
+            HTTP 200 with final upload and dataset statuses, HTTP 403 for
+            denied ownership, HTTP 400 for invalid upload data, or HTTP 502
+            for a runtime failure during abort processing.
+
+        Exceptions outside the handled failure types propagate to the caller.
         """
         try:
             self.logger.log_info(
@@ -168,6 +198,7 @@ class UploadController:
             result = await self.service.abort_upload(
                 dataset_id=(request.dataset_id),
                 upload_id=request.upload_id,
+                user_id=user_id,
             )
             response = UploadAbortResponseDTO(
                 success=True,
@@ -183,6 +214,17 @@ class UploadController:
                 status_code=status.HTTP_200_OK,
                 content=response.model_dump(mode="json"),
             )
+
+        except UploadAccessDeniedError:
+            return JSONResponse(
+                status_code=status.HTTP_403_FORBIDDEN,
+                content={
+                    "success": False,
+                    "message": "You do not have access to this upload.",
+                    "data": None,
+                },
+            )
+
         except ValueError as exc:
             self.logger.log_warning(
                 f"[upload:abort:controller] Upload abort validation failed: {exc}"

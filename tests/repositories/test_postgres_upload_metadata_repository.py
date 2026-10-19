@@ -31,7 +31,7 @@ class FakeDatasetRepository:
             status=DatasetStatus.UPLOADING,
             raw_object_key="raw/file.csv",
             prepared_object_key=None,
-            user_id=None,
+            user_id=17,
             description="test",
             file_type=None,
             content_type="text/csv",
@@ -69,11 +69,13 @@ async def test_create_converts_metadata_to_dataset():
             "content_type": "text/csv",
             "file_size_bytes": 100,
             "upload_id": "upload-1",
+            "user_id": 17,
         }
     )
 
     assert repository.created_dataset.name == "file.csv"
     assert repository.created_dataset.raw_object_key == ("raw/file.csv")
+    assert repository.created_dataset.user_id == 17
 
 
 @pytest.mark.asyncio
@@ -90,6 +92,7 @@ async def test_find_by_dataset_and_upload_returns_metadata():
 
     assert result["upload_id"] == "upload-1"
     assert result["object_key"] == "raw/file.csv"
+    assert result["user_id"] == 17
 
 
 @pytest.mark.asyncio

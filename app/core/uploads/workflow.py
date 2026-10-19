@@ -83,6 +83,8 @@ class UploadInitializationWorkflow:
     async def run(
         self,
         request: UploadInitRequestDTO,
+        *,
+        user_id: int,
     ) -> dict[str, Any]:
         """
         Execute the upload initialization workflow.
@@ -95,12 +97,27 @@ class UploadInitializationWorkflow:
         Args:
             request:
                 Validated upload initialization request.
+            user_id:
+                Trusted user identity persisted as the owner of the new dataset.
 
         Returns:
             Upload initialization result.
+
+        Raises:
+            ValueError: If the identity or upload constraints are invalid.
+
+        Storage, URL signing, and repository failures propagate. These
+        operations are separate and are not rolled back together.
         """
 
         LOGGER.log_info("[upload:init:workflow] Starting upload initialization")
+
+        if (
+            isinstance(user_id, bool)
+            or not isinstance(user_id, int)
+            or user_id <= 0
+        ):
+            raise ValueError("User identifier must be a positive integer.")
 
         self.validator.validate(
             filename=request.filename,
@@ -155,6 +172,7 @@ class UploadInitializationWorkflow:
             object_key=object_key,
             chunk_size_bytes=chunk_size_bytes,
             chunks_count=chunks_count,
+            user_id=user_id,
         )
 
         await self.repository.create(metadata)

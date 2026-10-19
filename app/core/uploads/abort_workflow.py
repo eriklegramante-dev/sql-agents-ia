@@ -5,6 +5,7 @@ from app.adapters.storage.blob_storage_adapter import MultipartStorageAdapter
 from app.core.uploads.enums import DatasetStatus, UploadStatus
 from app.logs.setup_logger import LOGGER
 from app.repositories.upload_metadata_repository import UploadMetadataRepository
+from app.core.uploads.exceptions import UploadAccessDeniedError
 
 
 class UploadAbortWorkflow:
@@ -42,19 +43,30 @@ class UploadAbortWorkflow:
         self,
         dataset_id: str,
         upload_id: str,
+        *,
+        user_id: int,
     ) -> dict[str, Any]:
-        """Run the upload abort orchestration.
+        """Abort an unfinished upload owned by the trusted caller.
+
+        Checks persisted ownership before processing the upload status or
+        invoking storage. Metadata already marked ABORTED produces a no-op
+        response; cancelable uploads are aborted and their status is updated.
 
         Args:
             dataset_id: Dataset identifier associated with the upload.
             upload_id: Multipart upload identifier to abort.
+            user_id: Trusted caller identity compared with the persisted owner.
 
         Returns:
-            Abort result containing dataset and upload final statuses.
+            Dictionary containing dataset and upload identifiers, an ABORTED
+            upload status, and a FAILED dataset status.
 
         Raises:
-            ValueError: If the upload does not exist or cannot be aborted.
-            RuntimeError: If the storage abort or cleanup operation fails.
+            UploadAccessDeniedError: If the caller does not own the upload.
+            ValueError: If metadata is absent or the upload cannot be aborted.
+            RuntimeError: If storage abort or temporary-part cleanup fails.
+
+        Repository failures propagate to the caller.
         """
         LOGGER.log_info("[upload:abort:workflow] Starting upload abort")
 
@@ -69,6 +81,11 @@ class UploadAbortWorkflow:
                 f"dataset_id={dataset_id}, upload_id={upload_id}"
             )
             raise ValueError("Upload metadata not found.")
+
+        if metadata.get("user_id") != user_id:
+            raise UploadAccessDeniedError(
+                "You do not have access to this upload."
+            )
 
         current_status = metadata.get("upload_status")
 

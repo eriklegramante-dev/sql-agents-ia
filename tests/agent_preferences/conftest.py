@@ -21,7 +21,7 @@ class MockAgentPreferencesRepository(AgentPreferencesRepository):
             }
         }
 
-    def find_by_user_id(self, user_id: int) -> Optional[Dict[str, Any]]:
+    async def find_by_user_id(self, user_id: int) -> Optional[Dict[str, Any]]:
         return self._mock_db.get(user_id)
 
 

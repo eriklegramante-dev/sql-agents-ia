@@ -30,11 +30,12 @@ class DatasetPreparationService:
         self.workflow = workflow
         self.logger = service_logger or logger
 
-    async def prepare_dataset(self, dataset_id: UUID) -> DatasetPreparationDataDTO:
+    async def prepare_dataset(self, dataset_id: UUID, *, user_id: int) -> DatasetPreparationDataDTO:
         """
         Runs dataset preparation for one dataset.
 
         Args:
+            user_id: Trusted caller identity used to authorize dataset ownership.
             dataset_id (UUID):
                 Identifier of the dataset to prepare.
 
@@ -51,7 +52,7 @@ class DatasetPreparationService:
         )
 
         try:
-            result = await self.workflow.execute(dataset_id)
+            result = await self.workflow.execute(dataset_id, user_id=user_id)
 
             self.logger.info(
                 "Dataset preparation service completed successfully for dataset %s",

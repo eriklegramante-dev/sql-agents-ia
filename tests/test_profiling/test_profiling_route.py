@@ -15,8 +15,9 @@ class FakeProfileController:
         self.exception = exception
         self.received_dataset_id = None
 
-    async def profile_dataset(self, dataset_id: UUID) -> dict:
+    async def profile_dataset(self, dataset_id: UUID, *, user_id: int) -> dict:
         self.received_dataset_id = dataset_id
+        self.received_user_id = user_id
 
         if self.exception is not None:
             raise self.exception
@@ -41,7 +42,7 @@ async def asgi_request(method: str, path: str):
         "path": path,
         "raw_path": path.encode(),
         "query_string": b"",
-        "headers": [(b"host", b"testserver")],
+        "headers": [(b"host", b"testserver"), (b"x-user-id", b"17"), (b"x-signature", b"dummy_secret_token")],
         "client": ("testclient", 50000),
         "server": ("testserver", 80),
     }

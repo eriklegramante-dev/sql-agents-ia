@@ -1,5 +1,6 @@
 import pytest
 
+from app.core.uploads.exceptions import UploadAccessDeniedError
 from app.core.uploads.abort_workflow import UploadAbortWorkflow
 from app.core.uploads.enums import DatasetStatus, UploadStatus
 
@@ -73,6 +74,7 @@ class FailingStorageAdapter(FakeStorageAdapter):
 
 def build_metadata(
     status=UploadStatus.UPLOADING.value,
+    user_id=17,
 ):
     return {
         "dataset_id": "dataset-1",
@@ -80,6 +82,7 @@ def build_metadata(
         "upload_status": status,
         "dataset_status": DatasetStatus.UPLOADING.value,
         "object_key": "datasets/dataset-1/raw/file.csv",
+        "user_id": user_id,
     }
 
 
@@ -98,6 +101,7 @@ async def test_abort_upload_successfully():
     result = await workflow.run(
         dataset_id="dataset-1",
         upload_id="upload-1",
+        user_id=17,
     )
 
     assert result == {
@@ -135,6 +139,7 @@ async def test_abort_upload_when_metadata_is_missing():
         await workflow.run(
             dataset_id="dataset-1",
             upload_id="upload-1",
+            user_id=17,
         )
 
 
@@ -152,6 +157,7 @@ async def test_abort_upload_returns_when_already_aborted():
     result = await workflow.run(
         dataset_id="dataset-1",
         upload_id="upload-1",
+        user_id=17,
     )
 
     assert result == {
@@ -180,6 +186,7 @@ async def test_abort_upload_rejects_completed_upload():
         await workflow.run(
             dataset_id="dataset-1",
             upload_id="upload-1",
+            user_id=17,
         )
 
 
@@ -211,6 +218,7 @@ async def test_abort_upload_rejects_invalid_status(
         await workflow.run(
             dataset_id="dataset-1",
             upload_id="upload-1",
+            user_id=17,
         )
 
 
@@ -233,6 +241,7 @@ async def test_abort_upload_rejects_missing_object_key():
         await workflow.run(
             dataset_id="dataset-1",
             upload_id="upload-1",
+            user_id=17,
         )
 
 
@@ -252,4 +261,38 @@ async def test_abort_upload_raises_runtime_error_when_storage_fails():
         await workflow.run(
             dataset_id="dataset-1",
             upload_id="upload-1",
+            user_id=17,
         )
+
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("owner_id", [23, None])
+@pytest.mark.parametrize(
+    "status",
+    [UploadStatus.UPLOADING.value, UploadStatus.ABORTED.value],
+)
+async def test_abort_rejects_unowned_upload_without_side_effects(
+    owner_id,
+    status,
+):
+    repository = FakeUploadMetadataRepository(
+        build_metadata(status=status, user_id=owner_id)
+    )
+    storage = FakeStorageAdapter()
+    workflow = UploadAbortWorkflow(repository, storage)
+
+    original_metadata = repository.metadata.copy()
+
+    with pytest.raises(UploadAccessDeniedError):
+        await workflow.run(
+            dataset_id="dataset-1",
+            upload_id="upload-1",
+            user_id=17,
+        )
+
+    assert repository.metadata == original_metadata
+    assert storage.abort_called is False
+    assert storage.cleanup_called is False
+    assert repository.updated_status is None
+    assert "aborted_at" not in repository.metadata

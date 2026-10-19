@@ -37,11 +37,12 @@ class DatasetProfileService:
         self.workflow = workflow or DatasetProfileWorkflow()
         self.logger = (logger or LOGGER).logger
 
-    async def profile_dataset(self, dataset_id: UUID) -> DatasetProfileResponseDTO:
+    async def profile_dataset(self, dataset_id: UUID, *, user_id: int) -> DatasetProfileResponseDTO:
         """
         Execute the dataset profiling workflow.
 
         Args:
+            user_id: Trusted caller identity used to authorize dataset ownership.
             dataset_id:
                 Unique identifier of the dataset to profile.
 
@@ -51,4 +52,4 @@ class DatasetProfileService:
         """
         self.logger.info("Executing dataset profiling service.")
 
-        return await self.workflow.execute(dataset_id)
+        return await self.workflow.execute(dataset_id, user_id=user_id)

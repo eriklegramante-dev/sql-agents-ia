@@ -21,9 +21,12 @@ class FakeWorkflow:
     async def execute(
         self,
         dataset_id: UUID,
+        *,
+        user_id: int,
     ) -> DatasetMetadata:
         """Return domain dataset metadata or raise the configured error."""
         self.received_dataset_id = dataset_id
+        self.received_user_id = user_id
 
         if self.error is not None:
             raise self.error
@@ -31,6 +34,7 @@ class FakeWorkflow:
         now = datetime.now(UTC)
 
         return DatasetMetadata(
+            user_id=17,
             dataset_id=dataset_id,
             name="Customers",
             original_filename="customers.csv",
@@ -50,13 +54,15 @@ class FakeWorkflow:
 class FakeListWorkflow:
     """Fake listing workflow used by dataset service tests."""
 
-    def __init__(self) -> None:
-        self.datasets: list[DatasetMetadata] = []
+    def __init__(self, datasets=None) -> None:
+        self.datasets: list[DatasetMetadata] = datasets if datasets is not None else []
+        self.received_user_id = None
         self.execute_called = False
 
-    async def execute(self) -> list[DatasetMetadata]:
+    async def execute(self, *, user_id: int) -> list[DatasetMetadata]:
         """Return the configured dataset metadata collection."""
         self.execute_called = True
+        self.received_user_id = user_id
         return self.datasets
 
 
@@ -71,9 +77,12 @@ class FakeDeletionWorkflow:
     async def execute(
         self,
         dataset_id: UUID,
+        *,
+        user_id: int,
     ) -> DatasetDeletionResult:
         """Return a simulated dataset deletion result."""
         self.received_dataset_id = dataset_id
+        self.received_user_id = user_id
 
         if self.error is not None:
             raise self.error
@@ -81,6 +90,7 @@ class FakeDeletionWorkflow:
         now = datetime.now(UTC)
 
         dataset = DatasetMetadata(
+            user_id=17,
             dataset_id=dataset_id,
             name="Customers",
             original_filename="customers.csv",
@@ -119,6 +129,7 @@ async def test_get_dataset_returns_response_data():
 
     response = await service.get_dataset(
         dataset_id=dataset_id,
+        user_id=17,
     )
 
     assert isinstance(
@@ -128,6 +139,7 @@ async def test_get_dataset_returns_response_data():
 
     assert response.dataset_id == dataset_id
     assert workflow.received_dataset_id == dataset_id
+    assert workflow.received_user_id == 17
     assert response.name == "Customers"
     assert response.original_filename == "customers.csv"
     assert response.status == DatasetStatus.COMPLETED.value
@@ -151,6 +163,7 @@ async def test_get_dataset_propagates_not_found_exception():
     with pytest.raises(NotFoundException):
         await service.get_dataset(
             dataset_id=uuid4(),
+            user_id=17,
         )
 
 
@@ -164,6 +177,7 @@ async def test_list_datasets_returns_response_data():
 
     list_workflow.datasets = [
         DatasetMetadata(
+            user_id=17,
             dataset_id=uuid4(),
             name="Customers",
             original_filename="customers.csv",
@@ -195,9 +209,10 @@ async def test_list_datasets_returns_response_data():
         deletion_workflow=deletion_workflow,
     )
 
-    response = await service.list_datasets()
+    response = await service.list_datasets(user_id=37)
 
     assert list_workflow.execute_called is True
+    assert list_workflow.received_user_id == 37
     assert len(response) == 1
 
     dataset = response[0]
@@ -230,6 +245,7 @@ async def test_list_datasets_preserves_unavailable_profile():
 
     list_workflow.datasets = [
         DatasetMetadata(
+            user_id=17,
             dataset_id=uuid4(),
             name="Customers",
             original_filename="customers.csv",
@@ -252,7 +268,7 @@ async def test_list_datasets_preserves_unavailable_profile():
         deletion_workflow=deletion_workflow,
     )
 
-    response = await service.list_datasets()
+    response = await service.list_datasets(user_id=37)
 
     assert len(response) == 1
 
@@ -279,9 +295,10 @@ async def test_list_datasets_returns_empty_list():
         deletion_workflow=deletion_workflow,
     )
 
-    response = await service.list_datasets()
+    response = await service.list_datasets(user_id=37)
 
     assert list_workflow.execute_called is True
+    assert list_workflow.received_user_id == 37
     assert response == []
 
 
@@ -302,9 +319,11 @@ async def test_delete_dataset_returns_deletion_result():
 
     result = await service.delete_dataset(
         dataset_id=dataset_id,
+        user_id=17,
     )
 
     assert deletion_workflow.received_dataset_id == dataset_id
+    assert deletion_workflow.received_user_id == 17
     assert result.dataset.dataset_id == dataset_id
     assert result.dataset.status == DatasetStatus.DELETED.value
     assert result.already_deleted is False
@@ -327,6 +346,7 @@ async def test_delete_dataset_returns_already_deleted_result():
 
     result = await service.delete_dataset(
         dataset_id=uuid4(),
+        user_id=17,
     )
 
     assert result.already_deleted is True
@@ -351,4 +371,21 @@ async def test_delete_dataset_propagates_not_found_exception():
     with pytest.raises(NotFoundException):
         await service.delete_dataset(
             dataset_id=uuid4(),
+            user_id=17,
         )
+
+
+@pytest.mark.parametrize("empty", [False, True])
+async def test_list_datasets_forwards_identity_and_maps_all_metadata(empty):
+    from dataclasses import asdict
+
+    metadata = await FakeWorkflow().execute(dataset_id=uuid4(), user_id=17)
+    listing = FakeListWorkflow([] if empty else [metadata])
+    service = DatasetService(
+        workflow=FakeWorkflow(), list_workflow=listing,
+        deletion_workflow=FakeDeletionWorkflow(),
+    )
+    result = await service.list_datasets(user_id=37)
+    assert listing.received_user_id == 37
+    expected = [] if empty else [DatasetResponseDataDTO(**asdict(metadata)).model_dump()]
+    assert [item.model_dump() for item in result] == expected

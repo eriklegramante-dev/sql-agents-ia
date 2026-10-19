@@ -1,5 +1,7 @@
+from dataclasses import asdict
 from datetime import UTC, datetime
 from uuid import UUID
+from unittest.mock import AsyncMock
 
 import asyncpg
 import pytest
@@ -9,6 +11,7 @@ from app.core.datasets.exceptions import (
 )
 from app.database.dataset_repository import DatasetRepository
 from app.enums.dataset_status import DatasetStatus
+from app.core.datasets.models import DatasetMetadata
 
 
 class FakeTransaction:
@@ -137,6 +140,7 @@ def make_dataset_row(
 
     return {
         "id": UUID("44444444-4444-4444-4444-444444444444"),
+        "user_id": 17,
         "name": "Customers",
         "filename": "customers.csv",
         "status": DatasetStatus.PROFILED.value,
@@ -359,7 +363,7 @@ async def test_list_metadata_returns_active_dataset_metadata():
         pool=pool,
     )
 
-    result = await repository.list_metadata()
+    result = await repository.list_metadata(user_id=37)
 
     assert len(result) == 2
 
@@ -391,15 +395,18 @@ async def test_list_metadata_filters_deleted_and_orders_newest_first():
         pool=pool,
     )
 
-    result = await repository.list_metadata()
+    result = await repository.list_metadata(user_id=37)
 
     assert result == []
     assert pool.connection.fetch_query is not None
     assert "LEFT JOIN dataset_profiles" in pool.connection.fetch_query
     assert "WHERE d.status <> $1" in pool.connection.fetch_query
+    assert "AND d.user_id = $2" in pool.connection.fetch_query
+    assert "ON dp.dataset_id = d.id" in pool.connection.fetch_query
     assert "ORDER BY d.created_at DESC" in pool.connection.fetch_query
     assert pool.connection.fetch_args == (
         DatasetStatus.DELETED.value,
+        37,
     )
 
 
@@ -414,7 +421,7 @@ async def test_list_metadata_returns_empty_list_when_no_datasets_exist():
         pool=pool,
     )
 
-    result = await repository.list_metadata()
+    result = await repository.list_metadata(user_id=37)
 
     assert result == []
 
@@ -495,3 +502,121 @@ async def test_delete_related_records_wraps_database_failure():
     assert str(exc.value) == (
         f"Failed to delete related records for dataset {dataset_id}."
     )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("dataset_id", [
+    UUID("11111111-1111-1111-1111-111111111111"),
+    UUID("22222222-2222-2222-2222-222222222222"),
+])
+async def test_get_metadata_by_id_queries_received_id_and_maps_metadata(dataset_id):
+    """Guard against replacing ID retrieval with the listing SQL.
+
+    The mock records SQL and arguments; it does not execute PostgreSQL.
+    An undefined user_id must fail naturally rather than be patched away.
+    """
+    created_at = datetime(2026, 1, 2, tzinfo=UTC)
+    updated_at = datetime(2026, 1, 3, tzinfo=UTC)
+    row = {
+        "id": dataset_id,
+        "user_id": 17,
+        "name": "Customers",
+        "filename": "customers.csv",
+        "status": "COMPLETED",
+        "raw_object_key": "datasets/customers.csv",
+        "description": "Dataset for ID retrieval",
+        "content_type": "text/csv",
+        "file_size_bytes": 1024,
+        "rows_count": 12,
+        "columns_count": 3,
+        "created_at": created_at,
+        "updated_at": updated_at,
+        "profile": None,
+    }
+    pool = FakePool()
+    pool.connection.fetchrow = AsyncMock(return_value=row)
+    pool.connection.fetch = AsyncMock()
+
+    metadata = await DatasetRepository(pool=pool).get_metadata_by_id(
+        dataset_id=dataset_id,
+    )
+
+    pool.connection.fetchrow.assert_awaited_once()
+    query, *parameters = pool.connection.fetchrow.await_args.args
+    normalized_query = " ".join(query.split())
+    assert "FROM datasets AS d LEFT JOIN dataset_profiles AS dp ON dp.dataset_id = d.id" in normalized_query
+    assert normalized_query.split(" WHERE ", 1)[1].rstrip(";") == "d.id = $1"
+    assert parameters == [dataset_id]
+    assert pool.connection.fetchrow.await_args.kwargs == {}
+    pool.connection.fetch.assert_not_called()
+    assert isinstance(metadata, DatasetMetadata)
+    assert asdict(metadata) == {
+        "dataset_id": dataset_id,
+        "user_id": 17,
+        "name": "Customers",
+        "original_filename": "customers.csv",
+        "status": "COMPLETED",
+        "object_key": "datasets/customers.csv",
+        "description": "Dataset for ID retrieval",
+        "content_type": "text/csv",
+        "file_size_bytes": 1024,
+        "rows_count": 12,
+        "columns_count": 3,
+        "created_at": created_at,
+        "updated_at": updated_at,
+        "profile": None,
+    }
+
+
+@pytest.mark.asyncio
+async def test_list_metadata_filters_owner_with_parameters():
+    """Check SQL contract; a mock does not execute the PostgreSQL filter."""
+    from unittest.mock import AsyncMock
+    from app.enums.dataset_status import DatasetStatus
+
+    pool = FakePool()
+    pool.connection.fetch = AsyncMock(return_value=[])
+    repository = DatasetRepository(pool=pool)
+
+    assert await repository.list_metadata(user_id=37) == []
+
+    pool.connection.fetch.assert_awaited_once()
+    query, *parameters = pool.connection.fetch.await_args.args
+    assert "LEFT JOIN dataset_profiles AS dp ON dp.dataset_id = d.id" in " ".join(query.split())
+    assert "WHERE d.status <> $1 AND d.user_id = $2" in " ".join(query.split())
+    assert "ORDER BY d.created_at DESC" in " ".join(query.split())
+    assert parameters == [DatasetStatus.DELETED.value, 37]
+    assert pool.connection.fetch.await_args.kwargs == {}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("nullable", [False, True])
+async def test_list_metadata_preserves_mapping(nullable):
+    from dataclasses import asdict
+    from datetime import UTC, datetime
+    from unittest.mock import AsyncMock
+
+    now = datetime(2026, 1, 2, tzinfo=UTC)
+    row = {
+        "id": UUID("11111111-1111-1111-1111-111111111111"),
+        "user_id": 17,
+        "name": "Customers", "filename": "customers.csv", "status": "COMPLETED",
+        "raw_object_key": "datasets/customers.csv", "description": "Test dataset",
+        "content_type": "text/csv", "file_size_bytes": 1024,
+        "rows_count": 12, "columns_count": 3, "created_at": now, "updated_at": now,
+        "profile": None,
+    }
+    if nullable:
+        for key in ("filename", "description", "content_type", "file_size_bytes", "rows_count", "columns_count"):
+            row[key] = None
+    pool = FakePool()
+    pool.connection.fetch = AsyncMock(return_value=[row])
+    result = await DatasetRepository(pool=pool).list_metadata(user_id=37)
+    assert len(result) == 1
+    assert asdict(result[0]) == {
+        "user_id": row["user_id"],
+        "dataset_id": row["id"], "name": row["name"], "original_filename": row["filename"],
+        "status": row["status"], "object_key": row["raw_object_key"],
+        "profile": None,
+        **{key: row[key] for key in ("description", "content_type", "file_size_bytes", "rows_count", "columns_count", "created_at", "updated_at")},
+    }

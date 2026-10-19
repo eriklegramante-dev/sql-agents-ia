@@ -29,7 +29,7 @@ class FakeUploadController:
     - external storage services
     """
 
-    async def initialize_upload(self, request):
+    async def initialize_upload(self, request, *, user_id: int):
 
         filename = request.filename.lower()
 
@@ -97,7 +97,7 @@ class FakeUploadController:
             },
         )
 
-    async def complete_upload(self, request):
+    async def complete_upload(self, request, *, user_id: int):
 
         return JSONResponse(
             status_code=status.HTTP_200_OK,
@@ -114,7 +114,9 @@ class FakeUploadController:
             },
         )
 
-    async def abort_upload(self, request):
+    async def abort_upload(self, request, *, user_id: int):
+
+        assert user_id == 17
 
         return JSONResponse(
             status_code=status.HTTP_200_OK,
@@ -139,9 +141,12 @@ async def override_get_upload_controller():
 @pytest.fixture
 def client():
 
+    original_overrides = app.dependency_overrides.copy()
     app.dependency_overrides[get_upload_controller] = override_get_upload_controller
 
-    with TestClient(app) as test_client:
-        yield test_client
-
-    app.dependency_overrides.clear()
+    try:
+        with TestClient(app) as test_client:
+            yield test_client
+    finally:
+        app.dependency_overrides.clear()
+        app.dependency_overrides.update(original_overrides)

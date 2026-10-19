@@ -4,7 +4,7 @@ from app.adapters.storage.minio_blob_storage_adapter import (
 from app.adapters.storage.minio_multipart_client_adapter import (
     MinioMultipartClientAdapter,
 )
-from app.connections.minio import get_minio_client
+from app.connections.minio import get_minio_client, get_minio_signing_client
 from app.core.uploads.abort_workflow import UploadAbortWorkflow
 from app.core.uploads.complete_workflow import UploadCompletionWorkflow
 from app.core.uploads.workflow import UploadInitializationWorkflow
@@ -24,7 +24,15 @@ async def get_upload_controller() -> UploadController:
 
     The upload workflow persists its metadata in PostgreSQL through
     PostgresUploadMetadataRepository, allowing the dataset retrieval
-    endpoint to reuse the same metadata created during upload.
+    endpoint to reuse the same metadata created during upload, including
+    trusted ownership. Separate MinIO clients perform storage operations
+    and sign multipart URLs using the configured public endpoint.
+
+    Returns:
+        Controller with initialization, completion, and abort workflows.
+
+    Storage initialization and database pool failures propagate during
+    dependency resolution.
     """
 
     settings = get_settings()
@@ -40,6 +48,7 @@ async def get_upload_controller() -> UploadController:
         multipart_client=multipart_client,
         bucket_name=settings.minio.bucket_name,
         signed_url_expires_seconds=(settings.upload.signed_url_expires_seconds),
+        signing_client=get_minio_signing_client(settings=settings),
     )
 
     pool = await get_db_pool()

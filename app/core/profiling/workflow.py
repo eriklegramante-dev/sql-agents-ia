@@ -75,11 +75,12 @@ class DatasetProfileWorkflow:
         settings = get_settings()
         self.prepared_container = settings.storage.prepared_container
 
-    async def execute(self, dataset_id: UUID) -> DatasetProfileResponseDTO:
+    async def execute(self, dataset_id: UUID, *, user_id: int) -> DatasetProfileResponseDTO:
         """
         Execute the dataset profiling process.
 
         Args:
+            user_id: Trusted caller identity required to match the dataset owner.
             dataset_id:
                 Unique identifier of the dataset to profile.
 
@@ -89,7 +90,7 @@ class DatasetProfileWorkflow:
 
         Raises:
             NotFoundException:
-                When the dataset does not exist.
+                When the dataset does not exist or is not owned by the caller.
             ConflictException:
                 When the dataset is not prepared or has no prepared object key.
             ProcessingException:
@@ -99,7 +100,7 @@ class DatasetProfileWorkflow:
 
         dataset = await self.repository.get_by_id(dataset_id)
 
-        if not dataset:
+        if dataset is None or dataset.user_id is None or dataset.user_id != user_id:
             raise NotFoundException("Dataset not found.")
 
         if dataset.status != DatasetStatus.PREPARED.value:

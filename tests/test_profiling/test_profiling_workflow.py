@@ -102,7 +102,7 @@ class DatasetProfileWorkflowTest(unittest.IsolatedAsyncioTestCase):
         workflow = DatasetProfileWorkflow(repository, storage, calculator)
 
         with patch("app.core.profiling.workflow.datetime", FixedDatetime):
-            response = await workflow.execute(DATASET_ID)
+            response = await workflow.execute(DATASET_ID, user_id=17)
 
         self.assertEqual(response.success, True)
         self.assertEqual(response.message, "Dataset profiled successfully.")
@@ -131,7 +131,7 @@ class DatasetProfileWorkflowTest(unittest.IsolatedAsyncioTestCase):
         )
 
         with self.assertRaises(NotFoundException):
-            await workflow.execute(DATASET_ID)
+            await workflow.execute(DATASET_ID, user_id=17)
 
     async def test_execute_rejects_dataset_that_is_not_prepared(self):
         repository = FakeProfileRepository(make_dataset(status=DatasetStatus.COMPLETED))
@@ -140,7 +140,7 @@ class DatasetProfileWorkflowTest(unittest.IsolatedAsyncioTestCase):
         )
 
         with self.assertRaises(ConflictException):
-            await workflow.execute(DATASET_ID)
+            await workflow.execute(DATASET_ID, user_id=17)
 
         self.assertEqual(repository.status_updates, [])
 
@@ -153,7 +153,7 @@ class DatasetProfileWorkflowTest(unittest.IsolatedAsyncioTestCase):
         )
 
         with self.assertRaises(ConflictException):
-            await workflow.execute(DATASET_ID)
+            await workflow.execute(DATASET_ID, user_id=17)
 
         self.assertEqual(repository.status_updates, [])
 
@@ -169,7 +169,7 @@ class DatasetProfileWorkflowTest(unittest.IsolatedAsyncioTestCase):
         )
 
         with self.assertRaises(ProcessingException):
-            await workflow.execute(DATASET_ID)
+            await workflow.execute(DATASET_ID, user_id=17)
 
         self.assertEqual(
             repository.status_updates[0],
@@ -196,7 +196,7 @@ class DatasetProfileWorkflowTest(unittest.IsolatedAsyncioTestCase):
         )
 
         with self.assertRaisesRegex(ProcessingException, "profile failed"):
-            await workflow.execute(DATASET_ID)
+            await workflow.execute(DATASET_ID, user_id=17)
 
         self.assertEqual(
             repository.status_updates,

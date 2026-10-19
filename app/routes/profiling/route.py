@@ -2,6 +2,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path
 
+from app.security.security import get_trusted_user_id
 from app.prepare.exceptions import AppException
 from app.profiling.dependencies import get_dataset_profile_controller
 from app.routes.profiling.controllers.controller import DatasetProfileController
@@ -20,6 +21,7 @@ async def profile_dataset(
     controller: DatasetProfileController = Depends(
         get_dataset_profile_controller,
     ),
+    user_id: int = Depends(get_trusted_user_id),
 ) -> DatasetProfileResponseDTO:
     """
     Profile a prepared dataset.
@@ -29,6 +31,7 @@ async def profile_dataset(
     converted into the standardized HTTP error envelope used by the project.
 
     Args:
+        user_id: Trusted caller identity used to authorize dataset ownership.
         dataset_id:
             Unique identifier of the dataset to profile.
         controller:
@@ -44,7 +47,7 @@ async def profile_dataset(
             occurs during dataset profiling.
     """
     try:
-        return await controller.profile_dataset(dataset_id)
+        return await controller.profile_dataset(dataset_id, user_id=user_id)
 
     except AppException as error:
         raise HTTPException(

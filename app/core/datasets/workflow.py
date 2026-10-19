@@ -32,10 +32,13 @@ class DatasetWorkflow:
     async def execute(
         self,
         dataset_id: UUID,
+        *,
+        user_id: int,
     ) -> DatasetMetadata:
         """Retrieve dataset metadata.
 
         Args:
+            user_id: Trusted caller identity required to match the dataset owner.
             dataset_id:
                 Unique identifier of the dataset.
 
@@ -44,7 +47,7 @@ class DatasetWorkflow:
 
         Raises:
             NotFoundException:
-                If no dataset exists for the provided identifier.
+                If the dataset is missing or not owned by the caller.
         """
         self.logger.log_info(
             f"[dataset:get:workflow] Starting dataset retrieval for {dataset_id}"
@@ -54,7 +57,7 @@ class DatasetWorkflow:
             dataset_id=dataset_id,
         )
 
-        if dataset is None:
+        if dataset is None or dataset.user_id is None or dataset.user_id != user_id:
             raise NotFoundException(f"Dataset with ID {dataset_id} not found.")
 
         self.logger.log_info("[dataset:get:workflow] Dataset metadata found")

@@ -1,5 +1,5 @@
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock, Mock, call
 from uuid import uuid4
 
 import pytest
@@ -30,12 +30,14 @@ class TestAnalysisQueryWorkflow:
 
         self.logger = Mock()
 
+        self.execution_repository = Mock(record_success=AsyncMock())
         self.workflow = AnalysisQueryWorkflow(
             dataset_repository=self.dataset_repository,
             storage_adapter=self.storage_adapter,
             sql_validator=self.sql_validator,
             query_adapter=self.query_adapter,
             logger=self.logger(),
+            execution_repository=self.execution_repository,
         )
 
     def _build_dataset(
@@ -43,9 +45,11 @@ class TestAnalysisQueryWorkflow:
         status: DatasetStatus | str = DatasetStatus.PREPARED,
         prepared_object_key: str | None = "datasets/prepared.parquet",
         rows_count: int | None = 10,
+        user_id: int | None = 37,
     ) -> SimpleNamespace:
         return SimpleNamespace(
             id=self.dataset_id,
+            user_id=user_id,
             status=status,
             prepared_object_key=prepared_object_key,
             rows_count=rows_count,
@@ -79,8 +83,11 @@ class TestAnalysisQueryWorkflow:
             limit=2,
         )
 
-        result = await self.workflow.execute(request)
+        result = await self.workflow.execute(request, user_id=37)
 
+        self.execution_repository.record_success.assert_awaited_once_with(
+            user_id=37, dataset_id=self.dataset_id,
+        )
         assert result.dataset_id == self.dataset_id
         assert result.executed_sql == "SELECT id, name FROM dataset"
         assert result.columns == ["id", "name"]
@@ -123,13 +130,14 @@ class TestAnalysisQueryWorkflow:
         )
 
         with pytest.raises(AppException) as error:
-            await self.workflow.execute(request)
+            await self.workflow.execute(request, user_id=37)
 
         assert error.value.status_code == 404
         assert error.value.message == (f"Dataset {self.dataset_id} was not found.")
 
         self.storage_adapter.read_file.assert_not_awaited()
         self.query_adapter.execute.assert_not_called()
+        self.execution_repository.record_success.assert_not_awaited()
 
     @pytest.mark.anyio
     async def test_execute_should_reject_unprepared_dataset(
@@ -147,7 +155,7 @@ class TestAnalysisQueryWorkflow:
         )
 
         with pytest.raises(AppException) as error:
-            await self.workflow.execute(request)
+            await self.workflow.execute(request, user_id=37)
 
         assert error.value.status_code == 409
         assert error.value.message == (
@@ -156,6 +164,7 @@ class TestAnalysisQueryWorkflow:
 
         self.storage_adapter.read_file.assert_not_awaited()
         self.query_adapter.execute.assert_not_called()
+        self.execution_repository.record_success.assert_not_awaited()
 
     @pytest.mark.anyio
     async def test_execute_should_reject_dataset_without_prepared_object(
@@ -173,7 +182,7 @@ class TestAnalysisQueryWorkflow:
         )
 
         with pytest.raises(AppException) as error:
-            await self.workflow.execute(request)
+            await self.workflow.execute(request, user_id=37)
 
         assert error.value.status_code == 409
         assert error.value.message == (
@@ -182,6 +191,7 @@ class TestAnalysisQueryWorkflow:
 
         self.storage_adapter.read_file.assert_not_awaited()
         self.query_adapter.execute.assert_not_called()
+        self.execution_repository.record_success.assert_not_awaited()
 
     @pytest.mark.anyio
     async def test_execute_should_reject_unsafe_sql(self) -> None:
@@ -195,12 +205,13 @@ class TestAnalysisQueryWorkflow:
         )
 
         with pytest.raises(AppException) as error:
-            await self.workflow.execute(request)
+            await self.workflow.execute(request, user_id=37)
 
         assert error.value.status_code == 422
         assert error.value.message == ("Only SELECT statements are allowed.")
 
         self.query_adapter.execute.assert_not_called()
+        self.execution_repository.record_success.assert_not_awaited()
 
     @pytest.mark.anyio
     async def test_execute_should_reject_question_without_sql(
@@ -216,7 +227,7 @@ class TestAnalysisQueryWorkflow:
         )
 
         with pytest.raises(AppException) as error:
-            await self.workflow.execute(request)
+            await self.workflow.execute(request, user_id=37)
 
         assert error.value.status_code == 422
         assert error.value.message == (
@@ -225,6 +236,7 @@ class TestAnalysisQueryWorkflow:
         )
 
         self.query_adapter.execute.assert_not_called()
+        self.execution_repository.record_success.assert_not_awaited()
 
     @pytest.mark.anyio
     async def test_execute_should_prioritize_sql_over_question(
@@ -252,8 +264,11 @@ class TestAnalysisQueryWorkflow:
             limit=20,
         )
 
-        result = await self.workflow.execute(request)
+        result = await self.workflow.execute(request, user_id=37)
 
+        self.execution_repository.record_success.assert_awaited_once_with(
+            user_id=37, dataset_id=self.dataset_id,
+        )
         assert result.executed_sql == ("SELECT COUNT(*) AS total FROM dataset")
 
         self.query_adapter.execute.assert_called_once_with(
@@ -286,8 +301,11 @@ class TestAnalysisQueryWorkflow:
             sql="SELECT id FROM dataset;",
         )
 
-        result = await self.workflow.execute(request)
+        result = await self.workflow.execute(request, user_id=37)
 
+        self.execution_repository.record_success.assert_awaited_once_with(
+            user_id=37, dataset_id=self.dataset_id,
+        )
         assert result.executed_sql == "SELECT id FROM dataset"
 
         self.query_adapter.execute.assert_called_once_with(
@@ -314,8 +332,11 @@ class TestAnalysisQueryWorkflow:
             sql="SELECT id FROM dataset",
         )
 
-        result = await self.workflow.execute(request)
+        result = await self.workflow.execute(request, user_id=37)
 
+        self.execution_repository.record_success.assert_awaited_once_with(
+            user_id=37, dataset_id=self.dataset_id,
+        )
         assert result.limit == 20
 
         self.query_adapter.execute.assert_called_once_with(
@@ -323,3 +344,92 @@ class TestAnalysisQueryWorkflow:
             sql="SELECT id FROM dataset",
             limit=20,
         )
+
+    @pytest.mark.parametrize("owner_id", [23, None])
+    @pytest.mark.parametrize("status", [DatasetStatus.PREPARED, DatasetStatus.COMPLETED])
+    async def test_rejects_unowned_dataset_before_storage_and_sql(self, owner_id, status):
+        self.dataset_repository.get_by_id.return_value = self._build_dataset(
+            user_id=owner_id, status=status,
+        )
+        self.workflow.sql_validator = Mock()
+        request = AnalysisQueryInput(dataset_id=self.dataset_id, sql="DELETE FROM dataset")
+
+        with pytest.raises(AppException) as error:
+            await self.workflow.execute(request, user_id=37)
+
+        assert error.value.status_code == 403
+        assert error.value.message == "You do not have access to this dataset."
+        self.dataset_repository.get_by_id.assert_awaited_once_with(self.dataset_id)
+        self.storage_adapter.read_file.assert_not_awaited()
+        self.workflow.sql_validator.validate.assert_not_called()
+        self.query_adapter.execute.assert_not_called()
+        self.execution_repository.record_success.assert_not_awaited()
+
+    @pytest.mark.parametrize("limit, expected", [(None, 20), (101, 100)])
+    async def test_normalizes_workflow_limit(self, limit, expected):
+        self.dataset_repository.get_by_id.return_value = self._build_dataset()
+        self.query_adapter.execute.return_value = DuckDBQueryResult(
+            columns=[], rows=[], rows_count=0, returned_rows_count=0,
+        )
+        result = await self.workflow.execute(
+            AnalysisQueryInput(dataset_id=self.dataset_id, sql="SELECT * FROM dataset", limit=limit),
+            user_id=37,
+        )
+        self.execution_repository.record_success.assert_awaited_once_with(
+            user_id=37, dataset_id=self.dataset_id,
+        )
+        assert result.limit == expected
+        assert self.query_adapter.execute.call_args.kwargs["limit"] == expected
+
+    @pytest.mark.parametrize("limit", [0, -1])
+    async def test_rejects_nonpositive_workflow_limit(self, limit):
+        with pytest.raises(AppException) as error:
+            await self.workflow.execute(
+                AnalysisQueryInput(dataset_id=self.dataset_id, sql="SELECT * FROM dataset", limit=limit),
+                user_id=37,
+            )
+        assert error.value.status_code == 422
+        self.dataset_repository.get_by_id.assert_not_awaited()
+        self.storage_adapter.read_file.assert_not_awaited()
+        self.query_adapter.execute.assert_not_called()
+        self.execution_repository.record_success.assert_not_awaited()
+
+    @pytest.mark.parametrize("stage", ["storage", "sql", "persistence"])
+    async def test_failures_do_not_return_success(self, stage):
+        self.dataset_repository.get_by_id.return_value = self._build_dataset()
+        self.query_adapter.execute.return_value = DuckDBQueryResult(
+            columns=[], rows=[], rows_count=0, returned_rows_count=0,
+        )
+        operation = {"storage": self.storage_adapter.read_file,
+                     "sql": self.query_adapter.execute,
+                     "persistence": self.execution_repository.record_success}[stage]
+        error = RuntimeError("operation failed")
+        operation.side_effect = error
+        with pytest.raises(RuntimeError) as caught:
+            await self.workflow.execute(
+                AnalysisQueryInput(dataset_id=self.dataset_id, sql="SELECT * FROM dataset"),
+                user_id=37,
+            )
+        assert caught.value is error
+        if stage == "persistence":
+            self.query_adapter.execute.assert_called_once()
+            self.execution_repository.record_success.assert_awaited_once_with(
+                user_id=37, dataset_id=self.dataset_id,
+            )
+        else:
+            self.execution_repository.record_success.assert_not_awaited()
+
+    async def test_repeated_sql_records_each_success(self):
+        self.dataset_repository.get_by_id.return_value = self._build_dataset()
+        self.query_adapter.execute.return_value = DuckDBQueryResult(
+            columns=[], rows=[], rows_count=0, returned_rows_count=0,
+        )
+        request = AnalysisQueryInput(dataset_id=self.dataset_id, sql="SELECT * FROM dataset")
+        for _ in range(2):
+            result = await self.workflow.execute(request, user_id=37)
+            assert result.returned_rows_count == 0
+        assert self.query_adapter.execute.call_count == 2
+        assert self.execution_repository.record_success.await_args_list == [
+            call(user_id=37, dataset_id=self.dataset_id),
+            call(user_id=37, dataset_id=self.dataset_id),
+        ]

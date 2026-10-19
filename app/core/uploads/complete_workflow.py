@@ -7,6 +7,7 @@ from app.core.uploads.enums import DatasetStatus, UploadStatus
 from app.core.uploads.exceptions import UploadCompletionError
 from app.logs.setup_logger import LOGGER
 from app.repositories.upload_metadata_repository import UploadMetadataRepository
+from app.core.uploads.exceptions import UploadAccessDeniedError
 
 from uuid import UUID
 
@@ -42,22 +43,31 @@ class UploadCompletionWorkflow:
         dataset_id: UUID,
         upload_id: str,
         parts: list[dict[str, Any]],
+        *,
+        user_id: int,
     ) -> dict[str, Any]:
-        """Run the upload completion orchestration.
+        """Complete a multipart upload owned by the trusted caller.
+
+        Loads persisted metadata and checks ownership before validating the
+        parts and invoking object storage. After storage completes, delegates
+        part recording and final status persistence to the repository.
 
         Args:
             dataset_id: Dataset identifier associated with the upload.
             upload_id: Multipart upload identifier to complete.
-            parts: Uploaded multipart parts received from storage.
+            parts: Uploaded part numbers and ETags to validate and sort.
+            user_id: Trusted caller identity compared with the persisted owner.
 
         Returns:
-            Upload completion result containing final upload metadata.
+            Dictionary containing the dataset and upload identifiers, completed
+            status, object key, and completed part count.
 
         Raises:
-            ValueError:
-                If metadata, upload status, object key, or parts are invalid.
-            UploadCompletionError:
-                If object storage cannot complete the upload.
+            UploadAccessDeniedError: If the caller does not own the upload.
+            ValueError: If metadata, status, object key, or parts are invalid.
+            UploadCompletionError: If storage reports a completion failure.
+
+        Repository failures propagate to the caller.
         """
         LOGGER.log_info("[upload:complete:workflow] Starting upload completion")
 
@@ -72,6 +82,16 @@ class UploadCompletionWorkflow:
                 f"dataset_id={dataset_id}, upload_id={upload_id}"
             )
             raise ValueError("Upload metadata not found.")
+
+        if metadata.get("user_id") != user_id:
+            raise UploadAccessDeniedError(
+                "You do not have access to this upload."
+            )
+
+        if metadata.get("user_id") != user_id:
+            raise UploadAccessDeniedError(
+                "You do not have access to this upload."
+            )
 
         current_status = metadata.get("upload_status")
 
@@ -149,6 +169,7 @@ class UploadCompletionWorkflow:
             Multipart parts sorted by part number.
 
         Raises:
+            UploadAccessDeniedError: If the caller does not own the upload.
             ValueError:
                 If parts are empty, duplicated, invalid, or incomplete.
         """

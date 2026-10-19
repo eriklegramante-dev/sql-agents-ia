@@ -7,12 +7,15 @@ from app.routes.uploads.services.service import UploadService
 class FakeInitWorkflow:
     def __init__(self) -> None:
         self.received_request = None
+        self.received_user_id = None
 
     async def run(
         self,
         request: UploadInitRequestDTO,
+        user_id: int,
     ) -> dict:
         self.received_request = request
+        self.received_user_id = user_id
 
         return {"status": "UPLOADING"}
 
@@ -22,17 +25,20 @@ class FakeCompleteWorkflow:
         self.received_dataset_id = None
         self.received_upload_id = None
         self.received_parts = None
+        self.received_user_id = None
 
     async def run(
         self,
         dataset_id: str,
         upload_id: str,
         parts: list[dict],
+        user_id: int,
     ) -> dict:
 
         self.received_dataset_id = dataset_id
         self.received_upload_id = upload_id
         self.received_parts = parts
+        self.received_user_id = user_id
 
         return {
             "dataset_id": dataset_id,
@@ -47,15 +53,18 @@ class FakeAbortWorkflow:
     def __init__(self) -> None:
         self.received_dataset_id = None
         self.received_upload_id = None
+        self.received_user_id = None
 
     async def run(
         self,
         dataset_id: str,
         upload_id: str,
+        user_id: int,
     ) -> dict:
 
         self.received_dataset_id = dataset_id
         self.received_upload_id = upload_id
+        self.received_user_id = user_id
 
         return {
             "dataset_id": dataset_id,
@@ -103,11 +112,12 @@ async def test_initialize_upload_delegates_to_workflow() -> None:
         description=None,
     )
 
-    result = await service.initialize_upload(request)
+    result = await service.initialize_upload(request, user_id=17)
 
     assert result == {"status": "UPLOADING"}
 
     assert init_workflow.received_request == request
+    assert init_workflow.received_user_id == 17
 
 
 @pytest.mark.asyncio
@@ -126,6 +136,7 @@ async def test_complete_upload_delegates_to_workflow() -> None:
         dataset_id="dataset-1",
         upload_id="upload-1",
         parts=parts,
+        user_id=17,
     )
 
     assert result["status"] == "COMPLETED"
@@ -136,6 +147,8 @@ async def test_complete_upload_delegates_to_workflow() -> None:
 
     assert complete_workflow.received_parts == parts
 
+    assert complete_workflow.received_user_id == 17
+
 
 @pytest.mark.asyncio
 async def test_abort_upload_delegates_to_workflow() -> None:
@@ -145,6 +158,7 @@ async def test_abort_upload_delegates_to_workflow() -> None:
     result = await service.abort_upload(
         dataset_id="dataset-1",
         upload_id="upload-1",
+        user_id=17,
     )
 
     assert result["upload_status"] == "ABORTED"
@@ -152,3 +166,5 @@ async def test_abort_upload_delegates_to_workflow() -> None:
     assert abort_workflow.received_dataset_id == "dataset-1"
 
     assert abort_workflow.received_upload_id == "upload-1"
+
+    assert abort_workflow.received_user_id == 17

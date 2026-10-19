@@ -28,7 +28,7 @@ class DatasetPreparationWorkflowTest(unittest.IsolatedAsyncioTestCase):
         workflow = DatasetPreparationWorkflow(repository, storage)
 
         with patch("app.core.prepare.workflow.datetime", FixedDatetime):
-            response = await workflow.execute(DATASET_ID)
+            response = await workflow.execute(DATASET_ID, user_id=17)
 
         expected_key = f"{DATASET_ID}/prepared_20260623_153045.parquet"
         self.assertEqual(response.dataset_id, DATASET_ID)
@@ -63,14 +63,14 @@ class DatasetPreparationWorkflowTest(unittest.IsolatedAsyncioTestCase):
         )
 
         with self.assertRaises(NotFoundException):
-            await workflow.execute(DATASET_ID)
+            await workflow.execute(DATASET_ID, user_id=17)
 
     async def test_execute_rejects_dataset_that_is_not_completed(self):
         repository = FakeDatasetRepository(make_dataset(status=DatasetStatus.UPLOADING))
         workflow = DatasetPreparationWorkflow(repository, FakeStorage())
 
         with self.assertRaises(ConflictException):
-            await workflow.execute(DATASET_ID)
+            await workflow.execute(DATASET_ID, user_id=17)
 
         self.assertEqual(repository.status_updates, [])
 
@@ -79,7 +79,7 @@ class DatasetPreparationWorkflowTest(unittest.IsolatedAsyncioTestCase):
         workflow = DatasetPreparationWorkflow(repository, FakeStorage())
 
         with self.assertRaises(StorageException):
-            await workflow.execute(DATASET_ID)
+            await workflow.execute(DATASET_ID, user_id=17)
 
         self.assertEqual(
             repository.status_updates[0],
@@ -100,7 +100,7 @@ class DatasetPreparationWorkflowTest(unittest.IsolatedAsyncioTestCase):
             side_effect=RuntimeError("schema failed"),
         ):
             with self.assertRaisesRegex(RuntimeError, "schema failed"):
-                await workflow.execute(DATASET_ID)
+                await workflow.execute(DATASET_ID, user_id=17)
 
         self.assertEqual(
             repository.status_updates[0],
