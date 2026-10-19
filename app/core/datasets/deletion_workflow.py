@@ -65,10 +65,13 @@ class DatasetDeletionWorkflow:
     async def execute(
         self,
         dataset_id: UUID,
+        *,
+        user_id: int,
     ) -> DatasetDeletionResult:
         """Soft-delete a dataset and clean its related resources.
 
         Args:
+            user_id: Trusted caller identity required to match the dataset owner.
             dataset_id:
                 Unique identifier of the dataset to delete.
 
@@ -77,8 +80,8 @@ class DatasetDeletionWorkflow:
 
         Raises:
             NotFoundException:
-                If the dataset cannot be found or its final status cannot
-                be persisted.
+                If the dataset is missing, is not owned by the caller, or its
+                final status cannot be persisted.
             StorageOperationError:
                 If the raw dataset object cannot be removed from storage.
             DatasetRelatedRecordsDeletionException:
@@ -92,7 +95,7 @@ class DatasetDeletionWorkflow:
             dataset_id=dataset_id,
         )
 
-        if dataset is None:
+        if dataset is None or dataset.user_id is None or dataset.user_id != user_id:
             raise NotFoundException(f"Dataset with ID {dataset_id} not found.")
 
         if dataset.status == DatasetStatus.DELETED.value:

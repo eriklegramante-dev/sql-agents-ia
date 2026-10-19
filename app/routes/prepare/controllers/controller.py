@@ -21,17 +21,18 @@ class DatasetPreparationController:
     def __init__(self, service: DatasetPreparationService):
         self.service = service
 
-    async def prepare_dataset(self, dataset_id: UUID) -> dict:
+    async def prepare_dataset(self, dataset_id: UUID, *, user_id: int) -> dict:
         """Prepare a dataset and serialize the route response.
 
         Args:
+            user_id: Trusted caller identity used to authorize dataset ownership.
             dataset_id (UUID): Identifier of the dataset to prepare.
 
         Returns:
             dict: API response envelope with success flag, message, serialized
             preparation data.
         """
-        result = await self.service.prepare_dataset(dataset_id)
+        result = await self.service.prepare_dataset(dataset_id, user_id=user_id)
 
         response = DatasetPreparationResponseDTO(
             success=True,

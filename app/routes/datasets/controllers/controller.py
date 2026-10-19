@@ -78,10 +78,13 @@ class DatasetController:
     async def get_dataset(
         self,
         dataset_id: UUID,
+        *,
+        user_id: int,
     ) -> DatasetResponseDTO:
         """Handle a dataset metadata retrieval request.
 
         Args:
+            user_id: Trusted caller identity used to authorize dataset ownership.
             dataset_id: Unique identifier of the dataset to retrieve.
 
         Returns:
@@ -93,6 +96,7 @@ class DatasetController:
 
         response_data = await self.service.get_dataset(
             dataset_id=dataset_id,
+            user_id=user_id,
         )
 
         response = DatasetResponseDTO(
@@ -110,6 +114,8 @@ class DatasetController:
     async def delete_dataset(
         self,
         dataset_id: UUID,
+        *,
+        user_id: int,
     ) -> DatasetDeleteResponseDTO:
         """Handle a dataset deletion request.
 
@@ -117,6 +123,7 @@ class DatasetController:
         the response with the dataset final deletion state.
 
         Args:
+            user_id: Trusted caller identity used to authorize dataset ownership.
             dataset_id: Unique identifier of the dataset to delete.
 
         Returns:
@@ -129,6 +136,7 @@ class DatasetController:
 
         result = await self.service.delete_dataset(
             dataset_id=dataset_id,
+            user_id=user_id,
         )
 
         message = (

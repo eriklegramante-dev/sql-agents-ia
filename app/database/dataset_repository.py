@@ -121,6 +121,7 @@ class DatasetRepository(BaseRepository[DatasetTable]):
 
         return DatasetMetadata(
             dataset_id=row["id"],
+            user_id=row["user_id"],
             name=row["name"],
             original_filename=row["filename"],
             content_type=row["content_type"],
@@ -284,6 +285,7 @@ class DatasetRepository(BaseRepository[DatasetTable]):
                 """
                 SELECT
                     d.id,
+                    d.user_id,
                     d.name,
                     d.filename,
                     d.status,
@@ -329,6 +331,7 @@ class DatasetRepository(BaseRepository[DatasetTable]):
                 """
                 SELECT
                     d.id,
+                    d.user_id,
                     d.name,
                     d.filename,
                     d.status,

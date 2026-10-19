@@ -33,6 +33,7 @@ class DatasetMetadata:
 
     Attributes:
         dataset_id: Unique identifier of the dataset.
+        user_id: Optional dataset owner identifier used for authorization.
         name: Dataset display name.
         original_filename: Original uploaded filename.
         content_type: Dataset MIME type.
@@ -48,6 +49,7 @@ class DatasetMetadata:
     """
 
     dataset_id: UUID
+    user_id: int | None
     name: str
     original_filename: str | None
     content_type: str | None

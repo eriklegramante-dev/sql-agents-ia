@@ -3,6 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Path
 
 from app.prepare.dependencies import get_dataset_preparation_controller
+from app.security.security import get_trusted_user_id
 from app.prepare.exceptions import AppException
 from app.routes.prepare.controllers.controller import DatasetPreparationController
 from app.routes.prepare.dtos.dto import DatasetPreparationResponseDTO
@@ -20,6 +21,7 @@ async def prepare_dataset(
     controller: DatasetPreparationController = Depends(
         get_dataset_preparation_controller
     ),
+    user_id: int = Depends(get_trusted_user_id),
 ) -> DatasetPreparationResponseDTO:
     """
     Prepares a completed uploaded dataset for analytical processing.
@@ -31,9 +33,10 @@ async def prepare_dataset(
     the dataset processing status.
 
     Authentication:
-        This endpoint does not currently require authentication.
+        Requires a valid internal signature and the trusted dataset owner identity.
 
     Args:
+        user_id: Trusted caller identity used to authorize dataset ownership.
         dataset_id (UUID):
             Unique identifier of the dataset to prepare.
         controller (DatasetPreparationController):
@@ -49,7 +52,7 @@ async def prepare_dataset(
             failures into the API error envelope.
     """
     try:
-        return await controller.prepare_dataset(dataset_id)
+        return await controller.prepare_dataset(dataset_id, user_id=user_id)
 
     except AppException as error:
         raise HTTPException(

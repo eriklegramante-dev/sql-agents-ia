@@ -11,8 +11,9 @@ class FakePreparationService:
         self.response = response
         self.received_dataset_id = None
 
-    async def prepare_dataset(self, dataset_id):
+    async def prepare_dataset(self, dataset_id, *, user_id: int):
         self.received_dataset_id = dataset_id
+        self.received_user_id = user_id
         return self.response
 
 
@@ -39,9 +40,10 @@ class DatasetPreparationControllerTest(unittest.IsolatedAsyncioTestCase):
         service = FakePreparationService(response_data)
         controller = DatasetPreparationController(service)
 
-        result = await controller.prepare_dataset(DATASET_ID)
+        result = await controller.prepare_dataset(DATASET_ID, user_id=17)
 
         self.assertEqual(service.received_dataset_id, DATASET_ID)
+        self.assertEqual(service.received_user_id, 17)
         self.assertEqual(result["success"], True)
         self.assertEqual(result["message"], "Dataset prepared successfully")
         self.assertNotIn("errors", result)

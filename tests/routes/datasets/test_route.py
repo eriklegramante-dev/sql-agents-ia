@@ -17,6 +17,8 @@ class FakeDatasetController:
     async def get_dataset(
         self,
         dataset_id: UUID,
+        *,
+        user_id: int,
     ):
         """Return dataset metadata or raise the configured application error."""
         if self.error is not None:
@@ -44,6 +46,8 @@ class FakeDatasetController:
     async def delete_dataset(
         self,
         dataset_id: UUID,
+        *,
+        user_id: int,
     ):
         """Return deletion data or raise the configured application error."""
         if self.error is not None:
@@ -69,7 +73,7 @@ def test_get_dataset_route_success(client):
     dataset_id = uuid4()
 
     try:
-        response = client.get(f"/api/v1/datasets/{dataset_id}")
+        response = client.get(f"/api/v1/datasets/{dataset_id}", headers={"X-User-Id": "17", "X-Signature": "dummy_secret_token"})
     finally:
         app.dependency_overrides.clear()
 
@@ -88,7 +92,7 @@ def test_get_dataset_route_rejects_invalid_uuid(client):
     app.dependency_overrides[get_dataset_controller] = lambda: FakeDatasetController()
 
     try:
-        response = client.get("/api/v1/datasets/invalid-uuid")
+        response = client.get("/api/v1/datasets/invalid-uuid", headers={"X-User-Id": "17", "X-Signature": "dummy_secret_token"})
     finally:
         app.dependency_overrides.clear()
 
@@ -103,7 +107,7 @@ def test_get_dataset_route_handles_not_found_error(client):
     app.dependency_overrides[get_dataset_controller] = lambda: controller
 
     try:
-        response = client.get(f"/api/v1/datasets/{uuid4()}")
+        response = client.get(f"/api/v1/datasets/{uuid4()}", headers={"X-User-Id": "17", "X-Signature": "dummy_secret_token"})
     finally:
         app.dependency_overrides.clear()
 
@@ -123,7 +127,7 @@ def test_delete_dataset_route_success(client):
     dataset_id = uuid4()
 
     try:
-        response = client.delete(f"/api/v1/datasets/{dataset_id}")
+        response = client.delete(f"/api/v1/datasets/{dataset_id}", headers={"X-User-Id": "17", "X-Signature": "dummy_secret_token"})
     finally:
         app.dependency_overrides.clear()
 
@@ -143,7 +147,7 @@ def test_delete_dataset_route_rejects_invalid_uuid(client):
     app.dependency_overrides[get_dataset_controller] = lambda: FakeDatasetController()
 
     try:
-        response = client.delete("/api/v1/datasets/invalid-uuid")
+        response = client.delete("/api/v1/datasets/invalid-uuid", headers={"X-User-Id": "17", "X-Signature": "dummy_secret_token"})
     finally:
         app.dependency_overrides.clear()
 
@@ -158,7 +162,7 @@ def test_delete_dataset_route_handles_not_found_error(client):
     app.dependency_overrides[get_dataset_controller] = lambda: controller
 
     try:
-        response = client.delete(f"/api/v1/datasets/{uuid4()}")
+        response = client.delete(f"/api/v1/datasets/{uuid4()}", headers={"X-User-Id": "17", "X-Signature": "dummy_secret_token"})
     finally:
         app.dependency_overrides.clear()
 

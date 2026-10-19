@@ -25,9 +25,12 @@ class FakeDatasetService:
     async def get_dataset(
         self,
         dataset_id: UUID,
+        *,
+        user_id: int,
     ) -> DatasetResponseDataDTO:
         """Return dataset metadata or raise the configured error."""
         self.received_dataset_id = dataset_id
+        self.received_user_id = user_id
 
         if self.error is not None:
             raise self.error
@@ -66,9 +69,12 @@ class FakeDatasetService:
     async def delete_dataset(
         self,
         dataset_id: UUID,
+        *,
+        user_id: int,
     ) -> DatasetDeletionResult:
         """Return a simulated dataset deletion result."""
         self.received_dataset_id = dataset_id
+        self.received_user_id = user_id
 
         if self.error is not None:
             raise self.error
@@ -76,6 +82,7 @@ class FakeDatasetService:
         now = datetime.now(UTC)
 
         dataset = DatasetMetadata(
+            user_id=17,
             dataset_id=dataset_id,
             name="Customers",
             original_filename="customers.csv",
@@ -110,6 +117,7 @@ async def test_get_dataset_returns_success_response():
 
     response = await controller.get_dataset(
         dataset_id=dataset_id,
+        user_id=17,
     )
 
     assert response.success is True
@@ -117,6 +125,7 @@ async def test_get_dataset_returns_success_response():
     assert response.data is not None
     assert response.data.dataset_id == dataset_id
     assert service.received_dataset_id == dataset_id
+    assert service.received_user_id == 17
 
 
 @pytest.mark.asyncio
@@ -133,6 +142,7 @@ async def test_get_dataset_propagates_not_found_exception():
     with pytest.raises(NotFoundException) as exc:
         await controller.get_dataset(
             dataset_id=uuid4(),
+            user_id=17,
         )
 
     assert str(exc.value) == "Dataset not found."
@@ -240,6 +250,7 @@ async def test_delete_dataset_returns_success_response():
 
     response = await controller.delete_dataset(
         dataset_id=dataset_id,
+        user_id=17,
     )
 
     assert response.success is True
@@ -248,6 +259,7 @@ async def test_delete_dataset_returns_success_response():
     assert response.data.dataset_id == dataset_id
     assert response.data.status == DatasetStatus.DELETED.value
     assert service.received_dataset_id == dataset_id
+    assert service.received_user_id == 17
 
 
 @pytest.mark.asyncio
@@ -262,6 +274,7 @@ async def test_delete_dataset_returns_already_deleted_message():
 
     response = await controller.delete_dataset(
         dataset_id=uuid4(),
+        user_id=17,
     )
 
     assert response.success is True
@@ -284,6 +297,7 @@ async def test_delete_dataset_propagates_not_found_exception():
     with pytest.raises(NotFoundException):
         await controller.delete_dataset(
             dataset_id=uuid4(),
+            user_id=17,
         )
 
 
@@ -292,7 +306,7 @@ async def test_list_datasets_forwards_identity_and_returns_success(empty):
     from unittest.mock import AsyncMock
 
     service = FakeDatasetService()
-    metadata = await service.get_dataset(dataset_id=uuid4())
+    metadata = await service.get_dataset(dataset_id=uuid4(), user_id=17)
     data = [] if empty else [metadata]
     service.list_datasets = AsyncMock(return_value=data)
     response = await DatasetController(service=service).list_datasets(user_id=37)

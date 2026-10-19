@@ -140,6 +140,7 @@ def make_dataset_row(
 
     return {
         "id": UUID("44444444-4444-4444-4444-444444444444"),
+        "user_id": 17,
         "name": "Customers",
         "filename": "customers.csv",
         "status": DatasetStatus.PROFILED.value,
@@ -518,6 +519,7 @@ async def test_get_metadata_by_id_queries_received_id_and_maps_metadata(dataset_
     updated_at = datetime(2026, 1, 3, tzinfo=UTC)
     row = {
         "id": dataset_id,
+        "user_id": 17,
         "name": "Customers",
         "filename": "customers.csv",
         "status": "COMPLETED",
@@ -550,6 +552,7 @@ async def test_get_metadata_by_id_queries_received_id_and_maps_metadata(dataset_
     assert isinstance(metadata, DatasetMetadata)
     assert asdict(metadata) == {
         "dataset_id": dataset_id,
+        "user_id": 17,
         "name": "Customers",
         "original_filename": "customers.csv",
         "status": "COMPLETED",
@@ -596,6 +599,7 @@ async def test_list_metadata_preserves_mapping(nullable):
     now = datetime(2026, 1, 2, tzinfo=UTC)
     row = {
         "id": UUID("11111111-1111-1111-1111-111111111111"),
+        "user_id": 17,
         "name": "Customers", "filename": "customers.csv", "status": "COMPLETED",
         "raw_object_key": "datasets/customers.csv", "description": "Test dataset",
         "content_type": "text/csv", "file_size_bytes": 1024,
@@ -610,6 +614,7 @@ async def test_list_metadata_preserves_mapping(nullable):
     result = await DatasetRepository(pool=pool).list_metadata(user_id=37)
     assert len(result) == 1
     assert asdict(result[0]) == {
+        "user_id": row["user_id"],
         "dataset_id": row["id"], "name": row["name"], "original_filename": row["filename"],
         "status": row["status"], "object_key": row["raw_object_key"],
         "profile": None,

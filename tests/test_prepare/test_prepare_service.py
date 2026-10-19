@@ -9,8 +9,9 @@ class FakePreparationWorkflow:
         self.response = response
         self.received_dataset_id = None
 
-    async def execute(self, dataset_id):
+    async def execute(self, dataset_id, *, user_id: int):
         self.received_dataset_id = dataset_id
+        self.received_user_id = user_id
         return self.response
 
 
@@ -20,10 +21,11 @@ class DatasetPreparationServiceTest(unittest.IsolatedAsyncioTestCase):
         workflow = FakePreparationWorkflow(expected_response)
         service = DatasetPreparationService(workflow)
 
-        response = await service.prepare_dataset(DATASET_ID)
+        response = await service.prepare_dataset(DATASET_ID, user_id=17)
 
         self.assertIs(response, expected_response)
         self.assertEqual(workflow.received_dataset_id, DATASET_ID)
+        self.assertEqual(workflow.received_user_id, 17)
 
 
 if __name__ == "__main__":

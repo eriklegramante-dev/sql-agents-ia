@@ -13,8 +13,9 @@ class FakeProfileService:
         self.response = response
         self.received_dataset_id = None
 
-    async def profile_dataset(self, dataset_id):
+    async def profile_dataset(self, dataset_id, *, user_id: int):
         self.received_dataset_id = dataset_id
+        self.received_user_id = user_id
         return self.response
 
 
@@ -55,10 +56,11 @@ class DatasetProfileControllerTest(unittest.IsolatedAsyncioTestCase):
         service = FakeProfileService(expected_response)
         controller = DatasetProfileController(service)
 
-        response = await controller.profile_dataset(DATASET_ID)
+        response = await controller.profile_dataset(DATASET_ID, user_id=17)
 
         self.assertIs(response, expected_response)
         self.assertEqual(service.received_dataset_id, DATASET_ID)
+        self.assertEqual(service.received_user_id, 17)
 
 
 if __name__ == "__main__":

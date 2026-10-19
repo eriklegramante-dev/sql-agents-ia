@@ -139,10 +139,13 @@ class DatasetService:
     async def get_dataset(
         self,
         dataset_id: UUID,
+        *,
+        user_id: int,
     ) -> DatasetResponseDataDTO:
         """Retrieve dataset metadata and convert it to response data.
 
         Args:
+            user_id: Trusted caller identity used to authorize dataset ownership.
             dataset_id: Unique identifier of the dataset to retrieve.
 
         Returns:
@@ -154,6 +157,7 @@ class DatasetService:
 
         result = await self.workflow.execute(
             dataset_id=dataset_id,
+            user_id=user_id,
         )
 
         response_data = self._to_response_data(result)
@@ -167,10 +171,13 @@ class DatasetService:
     async def delete_dataset(
         self,
         dataset_id: UUID,
+        *,
+        user_id: int,
     ) -> DatasetDeletionResult:
         """Execute the dataset deletion workflow.
 
         Args:
+            user_id: Trusted caller identity used to authorize dataset ownership.
             dataset_id: Unique identifier of the dataset to delete.
 
         Returns:
@@ -182,6 +189,7 @@ class DatasetService:
 
         result = await self.deletion_workflow.execute(
             dataset_id=dataset_id,
+            user_id=user_id,
         )
 
         self.logger.log_info(

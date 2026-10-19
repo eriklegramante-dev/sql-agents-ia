@@ -10,6 +10,7 @@ NOW = datetime(2026, 6, 23, 12, 0, 0)
 
 def make_dataset(
     *,
+    user_id: int | None = 17,
     status: DatasetStatus = DatasetStatus.COMPLETED,
     raw_object_key: str = "uploads/input.csv",
     prepared_object_key: str | None = None,
@@ -18,6 +19,7 @@ def make_dataset(
 ) -> DatasetTable:
     return DatasetTable(
         id=DATASET_ID,
+        user_id=user_id,
         name="dataset.csv",
         status=status,
         raw_object_key=raw_object_key,

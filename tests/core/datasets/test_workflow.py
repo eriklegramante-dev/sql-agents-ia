@@ -30,6 +30,7 @@ def make_dataset() -> DatasetMetadata:
     now = datetime.now(UTC)
 
     return DatasetMetadata(
+        user_id=17,
         dataset_id=uuid4(),
         name="Customers",
         original_filename="customers.csv",
@@ -58,6 +59,7 @@ async def test_execute_returns_dataset_metadata():
 
     response = await workflow.execute(
         dataset_id=repository.dataset.dataset_id,
+        user_id=17,
     )
 
     assert response.dataset_id == repository.dataset.dataset_id
@@ -88,6 +90,7 @@ async def test_execute_raises_not_found_when_dataset_does_not_exist():
     with pytest.raises(NotFoundException):
         await workflow.execute(
             dataset_id=dataset_id,
+            user_id=17,
         )
 
     assert repository.received_dataset_id == dataset_id
@@ -106,6 +109,7 @@ async def test_execute_accepts_status_as_plain_string():
 
     response = await workflow.execute(
         dataset_id=dataset.dataset_id,
+        user_id=17,
     )
 
     assert response.status == "COMPLETED"

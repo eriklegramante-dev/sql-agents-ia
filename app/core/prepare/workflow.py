@@ -48,10 +48,11 @@ class DatasetPreparationWorkflow:
         self.raw_container = settings.storage.raw_container
         self.prepared_container = settings.storage.prepared_container
 
-    async def execute(self, dataset_id: UUID) -> DatasetPreparationDataDTO:
+    async def execute(self, dataset_id: UUID, *, user_id: int) -> DatasetPreparationDataDTO:
         """Prepare one completed dataset and return its response payload.
 
         Args:
+            user_id: Trusted caller identity required to match the dataset owner.
             dataset_id (UUID): Identifier of the dataset to prepare.
 
         Returns:
@@ -59,7 +60,7 @@ class DatasetPreparationWorkflow:
             column counts, prepared object key, and inferred schema.
 
         Raises:
-            NotFoundException: If no dataset exists for ``dataset_id``.
+            NotFoundException: If the dataset is missing or not owned by the caller.
             ConflictException: If the dataset is not in completed status.
             StorageException: If the raw file cannot be read from storage.
             Exception: Re-raises unexpected processing or persistence errors
@@ -70,7 +71,7 @@ class DatasetPreparationWorkflow:
 
         dataset = await self.repository.get_by_id(dataset_id)
 
-        if dataset is None:
+        if dataset is None or dataset.user_id is None or dataset.user_id != user_id:
             PrepareLogger.not_found(dataset_id)
             raise NotFoundException(f"Dataset with ID {dataset_id} not found")
 

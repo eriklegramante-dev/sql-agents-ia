@@ -62,6 +62,7 @@ def test_list_forwards_identity_and_preserves_response(listing_client, empty):
     client, repository, listing = listing_client
     now = datetime(2026, 1, 2, tzinfo=UTC)
     metadata = DatasetMetadata(
+        user_id=17,
         dataset_id=UUID("11111111-1111-1111-1111-111111111111"),
         name="Customers", original_filename="customers.csv", content_type="text/csv",
         file_size_bytes=1024, status="COMPLETED", object_key="datasets/customers.csv",

@@ -75,6 +75,7 @@ class FakeRepository:
 
         if self.dataset is not None and self.update_status_result:
             self.dataset = DatasetMetadata(
+                user_id=self.dataset.user_id,
                 dataset_id=self.dataset.dataset_id,
                 name=self.dataset.name,
                 original_filename=self.dataset.original_filename,
@@ -124,6 +125,7 @@ def make_dataset(
     now = datetime.now(UTC)
 
     return DatasetMetadata(
+        user_id=17,
         dataset_id=uuid4(),
         name="Customers",
         original_filename="customers.csv",
@@ -167,6 +169,7 @@ async def test_delete_dataset_successfully():
 
     result = await workflow.execute(
         dataset_id=repository.dataset.dataset_id,
+        user_id=17,
     )
 
     assert result.already_deleted is False
@@ -187,6 +190,7 @@ async def test_delete_raises_not_found_when_dataset_does_not_exist():
     with pytest.raises(NotFoundException):
         await workflow.execute(
             dataset_id=uuid4(),
+            user_id=17,
         )
 
 
@@ -203,6 +207,7 @@ async def test_delete_returns_already_deleted_result():
 
     result = await workflow.execute(
         dataset_id=repository.dataset.dataset_id,
+        user_id=17,
     )
 
     assert result.already_deleted is True
@@ -224,6 +229,7 @@ async def test_delete_continues_when_storage_object_is_absent():
 
     result = await workflow.execute(
         dataset_id=repository.dataset.dataset_id,
+        user_id=17,
     )
 
     assert result.dataset.status == DatasetStatus.DELETED.value
@@ -246,6 +252,7 @@ async def test_delete_marks_dataset_failed_when_storage_cleanup_fails():
     with pytest.raises(StorageOperationError):
         await workflow.execute(
             dataset_id=repository.dataset.dataset_id,
+            user_id=17,
         )
 
     assert repository.related_records_deleted is False
@@ -269,6 +276,7 @@ async def test_delete_stops_when_related_record_cleanup_fails():
     with pytest.raises(DatasetRelatedRecordsDeletionException):
         await workflow.execute(
             dataset_id=repository.dataset.dataset_id,
+            user_id=17,
         )
 
     assert repository.related_records_deleted is False
@@ -288,6 +296,7 @@ async def test_delete_raises_when_deleted_status_cannot_be_persisted():
     with pytest.raises(NotFoundException):
         await workflow.execute(
             dataset_id=repository.dataset.dataset_id,
+            user_id=17,
         )
 
     assert repository.related_records_deleted is True
@@ -309,6 +318,7 @@ async def test_delete_raises_when_dataset_disappears_after_status_update():
     with pytest.raises(NotFoundException):
         await workflow.execute(
             dataset_id=dataset_id,
+            user_id=17,
         )
 
     assert repository.related_records_deleted is True
